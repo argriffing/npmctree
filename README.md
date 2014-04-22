@@ -6,10 +6,10 @@ Required dependencies:
  * [git](http://git-scm.com/) (installation)
  * [NetworkX](http:/networkx.lanl.gov/) (graph data types and algorithms)
    - `$ pip install --user git+https://github.com/networkx/networkx`
+ * [numpy](http://www.numpy.org/)
 
 Optional dependencies:
  * [nose](https://nose.readthedocs.org/) (testing)
- * [numpy](http://www.numpy.org/) (more testing infrastructure and assertions)
  * [coverage](http://nedbatchelder.com/code/coverage/) (test coverage)
    - `$ apt-get install python-coverage`
 

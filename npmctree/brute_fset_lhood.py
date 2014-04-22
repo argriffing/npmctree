@@ -6,14 +6,11 @@ This module is only for testing.
 """
 from __future__ import division, print_function, absolute_import
 
-from collections import defaultdict
-
 import numpy as np
-import networkx as nx
 
-import nxmctree
-from nxmctree.util import ddec, dict_distn
-from nxmctree.history import (
+import npmctree
+from npmctree.util import ddec, make_distn1d, make_distn2d, normalized
+from npmctree.history import (
         get_history_feas, get_history_lhood, gen_plausible_histories)
 
 __all__ = [
@@ -42,7 +39,8 @@ params = """\
 
 
 @ddec(params=params)
-def get_lhood_brute(T, edge_to_P, root, root_prior_distn, node_to_data_fset):
+def get_lhood_brute(T, edge_to_P, root,
+        root_prior_distn1d, node_to_data_fvec1d):
     """
     Get the likelihood of this combination of parameters.
 
@@ -54,9 +52,9 @@ def get_lhood_brute(T, edge_to_P, root, root_prior_distn, node_to_data_fset):
 
     """
     lk_total = None
-    for node_to_state in gen_plausible_histories(node_to_data_fset):
+    for node_to_state in gen_plausible_histories(node_to_data_fvec1d):
         lk = get_history_lhood(T, edge_to_P, root,
-                root_prior_distn, node_to_state)
+                root_prior_distn1d, node_to_state)
         if lk is not None:
             if lk_total is None:
                 lk_total = lk
@@ -66,8 +64,8 @@ def get_lhood_brute(T, edge_to_P, root, root_prior_distn, node_to_data_fset):
 
 
 @ddec(params=params)
-def get_node_to_distn_brute(T, edge_to_P, root,
-        root_prior_distn, node_to_data_fset):
+def get_node_to_distn1d_brute(T, edge_to_P, root,
+        root_prior_distn1d, node_to_data_fvec1d):
     """
     Get the map from node to state distribution.
 
@@ -78,21 +76,21 @@ def get_node_to_distn_brute(T, edge_to_P, root,
     {params}
 
     """
-    nodes = set(node_to_data_fset)
-    v_to_d = dict((v, defaultdict(float)) for v in nodes)
-    for node_to_state in gen_plausible_histories(node_to_data_fset):
+    n = root_prior_distn.shape[0]
+    nodes = set(node_to_data_fvec1d)
+    v_to_d = dict((v, make_distn1d(n)) for v in nodes)
+    for node_to_state in gen_plausible_histories(node_to_data_fvec1d):
         lk = get_history_lhood(T, edge_to_P, root,
-                root_prior_distn, node_to_state)
+                root_prior_distn1d, node_to_state)
         if lk is not None:
             for node, state in node_to_state.items():
                 v_to_d[node][state] += lk
-    v_to_posterior_distn = dict((v, dict_distn(d)) for v, d in v_to_d.items())
-    return v_to_posterior_distn
+    return dict((v, normalized(d)) for v, d in v_to_d.items())
 
 
 @ddec(params=params)
-def get_edge_to_nxdistn_brute(T, edge_to_P, root,
-        root_prior_distn, node_to_data_feasible_set):
+def get_edge_to_distn2d_brute(T, edge_to_P, root,
+        root_prior_distn1d, node_to_data_fvec1d):
     """
 
     Parameters
@@ -100,28 +98,22 @@ def get_edge_to_nxdistn_brute(T, edge_to_P, root,
     {params}
 
     """
-    edge_to_d = dict((edge, nx.DiGraph()) for edge in T.edges())
-    for node_to_state in gen_plausible_histories(node_to_data_feasible_set):
+    n = root_prior_distn1d.shape[0]
+    edge_to_d = dict((edge, make_distn2d(n)) for edge in T.edges())
+    for node_to_state in gen_plausible_histories(node_to_data_fvec1d):
         lk = get_history_lhood(T, edge_to_P, root,
-                root_prior_distn, node_to_state)
+                root_prior_distn1d, node_to_state)
         if lk is not None:
             for tree_edge in T.edges():
                 va, vb = tree_edge
                 sa = node_to_state[va]
                 sb = node_to_state[vb]
-                d = edge_to_d[tree_edge]
-                if d.has_edge(sa, sb):
-                    d[sa][sb]['weight'] += lk
-                else:
-                    d.add_edge(sa, sb, weight=lk)
+                edge_to_d[tree_edge][sa, sb] += lk
     for tree_edge in T.edges():
-        d = edge_to_d[tree_edge]
-        total = d.size(weight='weight')
-        for sa, sb in d.edges():
-            d[sa][sb]['weight'] /= total
+        edge_to_d[tree_edge] = normalized(edge_to_d[tree_edge])
     return edge_to_d
 
 
 # function suite for testing
-fnsuite = (get_lhood_brute, get_node_to_distn_brute, get_edge_to_nxdistn_brute)
+fnsuite = (get_lhood_brute, get_node_to_distn1d_brute, get_edge_to_distn2d_brute)
 
