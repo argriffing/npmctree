@@ -6,7 +6,7 @@ This module is only for testing.
 """
 from __future__ import division, print_function, absolute_import
 
-import networkx as nx
+import numpy as np
 
 import npmctree
 from npmctree.util import ddec
@@ -22,9 +22,9 @@ __all__ = [
 params = """\
     T : directed networkx tree graph
         Edge and node annotations are ignored.
-    edge_to_adjacency : dict
+    edge_to_A : dict
         A map from directed edges of the tree graph
-        to networkx graphs representing state transition feasibility.
+        to 2d bool ndarrays representing state transition feasibility.
     root : hashable
         This is the root node.
         Following networkx convention, this may be anything hashable.
@@ -57,16 +57,16 @@ def get_feas_brute(T, edge_to_A, root, root_prior_fvec1d, node_to_data_fvec1d):
         otherwise False.
 
     """
-    for node_to_state in gen_plausible_histories(node_to_data_fset):
+    for node_to_state in gen_plausible_histories(node_to_data_fvec1d):
         if get_history_feas(T, edge_to_A, root,
-                root_prior_fset, node_to_state):
+                root_prior_fvec1d, node_to_state):
             return True
     return False
 
 
 @ddec(params=params)
-def get_node_to_fset_brute(T, edge_to_A, root,
-        root_prior_fset, node_to_data_fset):
+def get_node_to_fvec1d_brute(T, edge_to_A, root,
+        root_prior_fvec1d, node_to_data_fvec1d):
     """
     Get the map from node to state feasibility.
 
@@ -78,22 +78,24 @@ def get_node_to_fset_brute(T, edge_to_A, root,
 
     Returns
     -------
-    node_to_posterior_fset : dict
-        Map from node to set of posterior feasible states.
+    node_to_posterior_fvec1d : dict
+        Map from node to fvec1d of posterior feasible states.
 
     """
-    nodes = set(node_to_data_fset)
-    v_to_feas = dict((v, set()) for v in nodes)
-    for node_to_state in gen_plausible_histories(node_to_data_fset):
-        if get_history_feas(T, edge_to_A, root, root_prior_fset, node_to_state):
+    n = root_prior_fvec1d.shape[0]
+    nodes = set(node_to_data_fvec1d)
+    v_to_feas = dict((v, np.zeros(n, dtype=bool)) for v in nodes)
+    for node_to_state in gen_plausible_histories(node_to_data_fvec1d):
+        if get_history_feas(T, edge_to_A, root,
+                root_prior_fvec1d, node_to_state):
             for node, state in node_to_state.items():
-                v_to_feas[node].add(state)
+                v_to_feas[node][state] = True
     return v_to_feas
 
 
 @ddec(params=params)
-def get_edge_to_nxfset_brute(T, edge_to_A, root,
-        root_prior_fset, node_to_data_fset):
+def get_edge_to_fvec2d_brute(T, edge_to_A, root,
+        root_prior_fvec1d, node_to_data_fvec1d):
     """
     Use brute force enumeration over all histories.
 
@@ -103,22 +105,23 @@ def get_edge_to_nxfset_brute(T, edge_to_A, root,
 
     Returns
     -------
-    edge_to_nxfset : map from directed edge to networkx DiGraph
-        For each directed edge in the rooted tree report the networkx DiGraph
-        among states, for which presence/absence of an edge defines the
-        posterior feasibility of the corresponding state transition
+    edge_to_fvec2d : map from directed edge to 2d boolean ndarray
+        For each directed edge in the rooted tree report the
+        2d bool ndarray among states, for which presence/absence of an edge
+        defines the posterior feasibility of the corresponding state transition
         along the edge.
 
     """
-    edge_to_d = dict((edge, nx.DiGraph()) for edge in T.edges())
-    for node_to_state in gen_plausible_histories(node_to_data_fset):
+    n = root_prior_fvec1d.shape[0]
+    edge_to_d = dict((edge, np.zeros((n, n), dtype=bool)) for edge in T.edges())
+    for node_to_state in gen_plausible_histories(node_to_data_fvec1d):
         if get_history_feas(T, edge_to_A, root,
-                root_prior_fset, node_to_state):
+                root_prior_fvec1d, node_to_state):
             for tree_edge in T.edges():
                 va, vb = tree_edge
                 sa = node_to_state[va]
                 sb = node_to_state[vb]
-                edge_to_d[tree_edge].add_edge(sa, sb)
+                edge_to_d[tree_edge][sa, sb] = True
     return edge_to_d
 
 
