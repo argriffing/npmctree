@@ -4,7 +4,7 @@ Markov chain feasibility algorithms on trees using NetworkX graphs.
 Regarding notation, sometimes a variable named 'v' (indicating a 'vertex' of
 a graph) is used to represent a networkx graph node,
 because this name is shorter than 'node' and looks less like a count than 'n'.
-The 'edge_to_adjacency' is a map from a directed edge on
+The 'edge_to_A' is a map from a directed edge on
 the networkx tree graph (in the direction from the root toward the tips)
 to a networkx directed graph representing a sparse state transition
 feasibility matrix.
@@ -27,7 +27,7 @@ __all__ = [
 params = """\
     T : directed networkx tree graph
         Edge and node annotations are ignored.
-    edge_to_adjacency : dict
+    edge_to_A : dict
         A map from directed edges of the tree graph
         to 2d boolean ndarrays representing state transition feasibility.
     root : hashable
@@ -45,7 +45,7 @@ params = """\
 
 
 @ddec(params=params)
-def get_feas(T, edge_to_adjacency, root,
+def get_feas(T, edge_to_A, root,
         root_prior_fvec1d, node_to_data_fvec1d):
     """
     Get the feasibility of this combination of parameters.
@@ -61,13 +61,13 @@ def get_feas(T, edge_to_adjacency, root,
         otherwise False.
 
     """
-    root_fvec1d = _get_root_fvec1d(T, edge_to_adjacency, root,
+    root_fvec1d = _get_root_fvec1d(T, edge_to_A, root,
             root_prior_fvec1d, node_to_data_fvec1d)
     return np.any(root_fvec1d)
 
 
 @ddec(params=params)
-def get_node_to_fvec1d(T, edge_to_adjacency, root,
+def get_node_to_fvec1d(T, edge_to_A, root,
         root_prior_fvec1d, node_to_data_fvec1d):
     """
     For each node get the marginal posterior set of feasible states.
@@ -88,15 +88,15 @@ def get_node_to_fvec1d(T, edge_to_adjacency, root,
         Map from node to 1d bool ndarray of posterior feasible states.
 
     """
-    v_to_subtree_fvec1d = _backward(T, edge_to_adjacency, root,
+    v_to_subtree_fvec1d = _backward(T, edge_to_A, root,
             root_prior_fvec1d, node_to_data_fvec1d)
-    v_to_posterior_fvec1d = _forward(T, edge_to_adjacency, root,
+    v_to_posterior_fvec1d = _forward(T, edge_to_A, root,
             v_to_subtree_fvec1d)
     return v_to_posterior_fvec1d
 
 
 @ddec(params=params)
-def get_edge_to_fvec2d(T, edge_to_adjacency, root,
+def get_edge_to_fvec2d(T, edge_to_A, root,
         root_prior_fvec1d, node_to_data_fvec1d):
     """
     For each edge, get the joint feasibility of states at edge endpoints.
@@ -116,12 +116,12 @@ def get_edge_to_fvec2d(T, edge_to_adjacency, root,
     """
     if not T:
         return {}
-    v_to_fvec1d = get_node_to_fvec1d(T, edge_to_adjacency, root,
+    v_to_fvec1d = get_node_to_fvec1d(T, edge_to_A, root,
             root_prior_fvec1d, node_to_data_fvec1d)
     edge_to_fvec2d = {}
     for edge in nx.bfs_edges(T, root):
         va, vb = edge
-        A = edge_to_adjacency[edge]
+        A = edge_to_A[edge]
         fa = v_to_fvec1d[va]
         fb = v_to_fvec1d[vb]
         edge_to_fvec2d[edge] = A & np.outer(fa, fb)
@@ -129,7 +129,7 @@ def get_edge_to_fvec2d(T, edge_to_adjacency, root,
 
 
 @ddec(params=params)
-def _get_root_fvec1d(T, edge_to_adjacency, root,
+def _get_root_fvec1d(T, edge_to_A, root,
         root_prior_fvec1d, node_to_data_fvec1d):
     """
     Get the posterior set of feasible states at the root.
@@ -139,13 +139,13 @@ def _get_root_fvec1d(T, edge_to_adjacency, root,
     {params}
 
     """
-    v_to_subtree_fvec1d = _backward(T, edge_to_adjacency, root,
+    v_to_subtree_fvec1d = _backward(T, edge_to_A, root,
             root_prior_fvec1d, node_to_data_fvec1d)
     return v_to_subtree_fvec1d[root]
 
 
 @ddec(params=params)
-def _backward(T, edge_to_adjacency, root,
+def _backward(T, edge_to_A, root,
         root_prior_fvec1d, node_to_data_fvec1d):
     """
     Determine the subtree feasible state set of each node.
@@ -158,15 +158,15 @@ def _backward(T, edge_to_adjacency, root,
     """
     v_to_subtree_fvec1d = {}
     for v in nx.topological_sort(T, [root], reverse=True):
-        fset_data = node_to_data_fset[v]
-        if T and T[v]:
+        fvec1d_data = node_to_data_fvec1d[v]
+        if T[v]:
             cs = T[v]
         else:
             cs = set()
         if cs:
             fset = set()
             for s in fset_data:
-                if _state_is_subtree_feasible(edge_to_adjacency,
+                if _state_is_subtree_feasible(edge_to_A,
                         v_to_subtree_fset, v, cs, s):
                     fset.add(s)
         else:
@@ -177,7 +177,7 @@ def _backward(T, edge_to_adjacency, root,
     return v_to_subtree_fset
 
 
-def _forward(T, edge_to_adjacency, root, v_to_subtree_fset):
+def _forward(T, edge_to_A, root, v_to_subtree_fset):
     """
     Forward pass.
 
@@ -188,7 +188,7 @@ def _forward(T, edge_to_adjacency, root, v_to_subtree_fset):
         return v_to_posterior_fset
     for edge in nx.bfs_edges(T, root):
         va, vb = edge
-        A = edge_to_adjacency[edge]
+        A = edge_to_A[edge]
         fset = set()
         for s in v_to_posterior_fset[va]:
             fset.update(set(A[s]) & v_to_subtree_fset[vb])
@@ -196,10 +196,10 @@ def _forward(T, edge_to_adjacency, root, v_to_subtree_fset):
     return v_to_posterior_fset
 
 
-def _state_is_subtree_feasible(edge_to_adjacency,
+def _state_is_subtree_feasible(edge_to_A,
         v_to_subtree_fset, v, cs, s):
     """
-    edge_to_adjacency : dict
+    edge_to_A : dict
         A map from directed edges of the tree graph
         to networkx graphs representing state transition feasibility.
     v_to_subtree_fset : which states are allowed in child nodes
@@ -209,7 +209,7 @@ def _state_is_subtree_feasible(edge_to_adjacency,
     """
     for c in cs:
         edge = v, c
-        A = edge_to_adjacency[edge]
+        A = edge_to_A[edge]
         if s not in A:
             return False
         if not set(A[s]) & v_to_subtree_fset[c]:
@@ -218,5 +218,5 @@ def _state_is_subtree_feasible(edge_to_adjacency,
 
 
 # function suite for testing
-fnsuite = (get_feas, get_node_to_fset, get_edge_to_nxfset)
+fnsuite = (get_feas, get_node_to_fvec1d, get_edge_to_fvec2d)
 
