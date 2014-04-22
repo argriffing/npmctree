@@ -12,14 +12,15 @@ feasibility matrix.
 """
 from __future__ import division, print_function, absolute_import
 
+import numpy as np
 import networkx as nx
 
 from nxmctree.util import ddec
 
 __all__ = [
         'get_feas',
-        'get_node_to_fset',
-        'get_edge_to_nxfset',
+        'get_node_to_fvec1d',
+        'get_edge_to_fvec2d',
         ]
 
 
@@ -28,15 +29,15 @@ params = """\
         Edge and node annotations are ignored.
     edge_to_adjacency : dict
         A map from directed edges of the tree graph
-        to networkx graphs representing state transition feasibility.
+        to 2d boolean ndarrays representing state transition feasibility.
     root : hashable
         This is the root node.
         Following networkx convention, this may be anything hashable.
-    root_prior_fset : set
+    root_prior_fvec1d : 1d bool ndarray
         The set of feasible prior root states.
         This may be interpreted as the support of the prior state
         distribution at the root.
-    node_to_data_fset : dict
+    node_to_data_fvec1d : dict
         Map from node to set of feasible states.
         The feasibility could be interpreted as due to restrictions
         caused by observed data.
@@ -44,7 +45,8 @@ params = """\
 
 
 @ddec(params=params)
-def get_feas(T, edge_to_adjacency, root, root_prior_fset, node_to_data_fset):
+def get_feas(T, edge_to_adjacency, root,
+        root_prior_fvec1d, node_to_data_fvec1d):
     """
     Get the feasibility of this combination of parameters.
 
@@ -59,14 +61,14 @@ def get_feas(T, edge_to_adjacency, root, root_prior_fset, node_to_data_fset):
         otherwise False.
 
     """
-    root_fset = _get_root_fset(T, edge_to_adjacency, root,
-            root_prior_fset, node_to_data_fset)
-    return True if root_fset else False
+    root_fvec1d = _get_root_fvec1d(T, edge_to_adjacency, root,
+            root_prior_fvec1d, node_to_data_fvec1d)
+    return np.any(root_fvec1d)
 
 
 @ddec(params=params)
-def get_node_to_fset(T, edge_to_adjacency, root,
-        root_prior_fset, node_to_data_fset):
+def get_node_to_fvec1d(T, edge_to_adjacency, root,
+        root_prior_fvec1d, node_to_data_fvec1d):
     """
     For each node get the marginal posterior set of feasible states.
 
@@ -83,19 +85,19 @@ def get_node_to_fset(T, edge_to_adjacency, root,
     Returns
     -------
     node_to_posterior_fset : dict
-        Map from node to set of posterior feasible states.
+        Map from node to 1d bool ndarray of posterior feasible states.
 
     """
-    v_to_subtree_fset = _backward(T, edge_to_adjacency, root,
-            root_prior_fset, node_to_data_fset)
-    v_to_posterior_fset = _forward(T, edge_to_adjacency, root,
-            v_to_subtree_fset)
-    return v_to_posterior_fset
+    v_to_subtree_fvec1d = _backward(T, edge_to_adjacency, root,
+            root_prior_fvec1d, node_to_data_fvec1d)
+    v_to_posterior_fvec1d = _forward(T, edge_to_adjacency, root,
+            v_to_subtree_fvec1d)
+    return v_to_posterior_fvec1d
 
 
 @ddec(params=params)
-def get_edge_to_nxfset(T, edge_to_adjacency, root,
-        root_prior_fset, node_to_data_fset):
+def get_edge_to_fvec2d(T, edge_to_adjacency, root,
+        root_prior_fvec1d, node_to_data_fvec1d):
     """
     For each edge, get the joint feasibility of states at edge endpoints.
 
@@ -105,7 +107,7 @@ def get_edge_to_nxfset(T, edge_to_adjacency, root,
 
     Returns
     -------
-    edge_to_nxfset : map from directed edge to networkx DiGraph
+    edge_to_fvec2d : map from directed edge to networkx DiGraph
         For each directed edge in the rooted tree report the networkx DiGraph
         among states, for which presence/absence of an edge defines the
         posterior feasibility of the corresponding state transition
@@ -114,23 +116,21 @@ def get_edge_to_nxfset(T, edge_to_adjacency, root,
     """
     if not T:
         return {}
-    v_to_fset = get_node_to_fset(T, edge_to_adjacency, root,
-            root_prior_fset, node_to_data_fset)
-    edge_to_nxfset = {}
+    v_to_fvec1d = get_node_to_fvec1d(T, edge_to_adjacency, root,
+            root_prior_fvec1d, node_to_data_fvec1d)
+    edge_to_fvec2d = {}
     for edge in nx.bfs_edges(T, root):
-        A = edge_to_adjacency[edge]
-        J = nx.DiGraph()
         va, vb = edge
-        for sa in v_to_fset[va]:
-            sbs = set(A[sa]) & v_to_fset[vb]
-            J.add_edges_from((sa, sb) for sb in sbs)
-        edge_to_nxfset[edge] = J
-    return edge_to_nxfset
+        A = edge_to_adjacency[edge]
+        fa = v_to_fvec1d[va]
+        fb = v_to_fvec1d[vb]
+        edge_to_fvec2d[edge] = A & np.outer(fa, fb)
+    return edge_to_fvec2d
 
 
 @ddec(params=params)
-def _get_root_fset(T, edge_to_adjacency, root,
-        root_prior_fset, node_to_data_fset):
+def _get_root_fvec1d(T, edge_to_adjacency, root,
+        root_prior_fvec1d, node_to_data_fvec1d):
     """
     Get the posterior set of feasible states at the root.
 
@@ -139,14 +139,14 @@ def _get_root_fset(T, edge_to_adjacency, root,
     {params}
 
     """
-    v_to_subtree_fset = _backward(T, edge_to_adjacency, root,
-            root_prior_fset, node_to_data_fset)
-    return v_to_subtree_fset[root]
+    v_to_subtree_fvec1d = _backward(T, edge_to_adjacency, root,
+            root_prior_fvec1d, node_to_data_fvec1d)
+    return v_to_subtree_fvec1d[root]
 
 
 @ddec(params=params)
 def _backward(T, edge_to_adjacency, root,
-        root_prior_fset, node_to_data_fset):
+        root_prior_fvec1d, node_to_data_fvec1d):
     """
     Determine the subtree feasible state set of each node.
     This is the backward pass of a backward-forward algorithm.
@@ -156,12 +156,8 @@ def _backward(T, edge_to_adjacency, root,
     {params}
 
     """
-    v_to_subtree_fset = {}
-    if T:
-        postorder_nodes = reversed(nx.topological_sort(T, [root]))
-    else:
-        postorder_nodes = [root]
-    for v in postorder_nodes:
+    v_to_subtree_fvec1d = {}
+    for v in nx.topological_sort(T, [root], reverse=True):
         fset_data = node_to_data_fset[v]
         if T and T[v]:
             cs = T[v]

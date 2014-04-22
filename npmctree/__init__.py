@@ -1,5 +1,5 @@
 """
-nxmctree module short description first line
+npmctree module short description first line
 
 """
 from __future__ import division, print_function, absolute_import
