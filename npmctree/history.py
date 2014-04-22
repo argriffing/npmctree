@@ -25,8 +25,6 @@ def get_history_feas(T, edge_to_A, root, root_prior_fvec1d, node_to_state):
     root_state = node_to_state[root]
     if not root_prior_fvec1d[root_state]:
         return False
-    if not T:
-        return True
     for edge in nx.bfs_edges(T, root):
         va, vb = edge
         A = edge_to_A[edge]
@@ -46,8 +44,6 @@ def get_history_lhood(T, edge_to_P, root, root_prior_distn1d, node_to_state):
     if not root_prior_distn1d[root_state]:
         return None
     lk = root_prior_distn1d[root_state]
-    if not T:
-        return lk
     for edge in nx.bfs_edges(T, root):
         va, vb = edge
         P = edge_to_P[edge]

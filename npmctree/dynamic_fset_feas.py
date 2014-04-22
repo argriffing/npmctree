@@ -114,8 +114,6 @@ def get_edge_to_fvec2d(T, edge_to_A, root,
         along the edge.
 
     """
-    if not T:
-        return {}
     v_to_fvec1d = get_node_to_fvec1d(T, edge_to_A, root,
             root_prior_fvec1d, node_to_data_fvec1d)
     edge_to_fvec2d = {}
@@ -184,8 +182,6 @@ def _forward(T, edge_to_A, root, v_to_subtree_fset):
     """
     v_to_posterior_fset = {}
     v_to_posterior_fset[root] = set(v_to_subtree_fset[root])
-    if not T:
-        return v_to_posterior_fset
     for edge in nx.bfs_edges(T, root):
         va, vb = edge
         A = edge_to_A[edge]
