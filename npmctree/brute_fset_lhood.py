@@ -8,6 +8,7 @@ from __future__ import division, print_function, absolute_import
 
 from collections import defaultdict
 
+import numpy as np
 import networkx as nx
 
 import nxmctree
@@ -17,8 +18,8 @@ from nxmctree.history import (
 
 __all__ = [
         'get_lhood_brute',
-        'get_node_to_distn_brute',
-        'get_edge_to_nxdistn_brute',
+        'get_node_to_distn1d_brute',
+        'get_edge_to_distn2d_brute',
         ]
 
 
@@ -31,10 +32,10 @@ params = """\
     root : hashable
         This is the root node.
         Following networkx convention, this may be anything hashable.
-    root_prior_distn : dict
+    root_prior_distn1d : dict
         Prior state distribution at the root.
-    node_to_data_fset : dict
-        Map from node to set of feasible states.
+    node_to_data_fvec1d : dict
+        Map from node to fvec1d of feasible states.
         The feasibility could be interpreted as due to restrictions
         caused by observed data.
 """

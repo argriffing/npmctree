@@ -60,3 +60,12 @@ Subsequently update online docs:
     $ git commit -am "update gh-pages"
     $ git push
 
+
+Developer notes -- variable naming glossary
+-------------------------------------------
+
+`fvec1d` : fixed-length 1d bool ndarray representing a feasible set
+`fvec2d` : fixed-size 2d bool ndarray representing a feasible set
+`distn1d` : fixed-length 1d float ndarray representing a univariate distribution
+`distn2d` : fixed-size 2d float ndarray representing a bivariate distribution
+
