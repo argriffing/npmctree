@@ -154,6 +154,7 @@ def _backward(T, edge_to_A, root,
     {params}
 
     """
+    n = root_prior_fvec1d.shape[0]
     v_to_subtree_fvec1d = {}
     for va in nx.topological_sort(T, [root], reverse=True):
         fvec1d_data = node_to_data_fvec1d[va]

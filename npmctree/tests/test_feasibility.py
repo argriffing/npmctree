@@ -10,8 +10,8 @@ import networkx as nx
 from numpy.testing import (run_module_suite, TestCase,
         decorators, assert_, assert_equal)
 
-import nxmctree
-from nxmctree.dynamic_fset_feas import get_feas, get_node_to_fset
+import npmctree
+from npmctree.dynamic_fset_feas import get_feas, get_node_to_fvec1d
 
 
 class Test_ShortPathFeasibility(TestCase):

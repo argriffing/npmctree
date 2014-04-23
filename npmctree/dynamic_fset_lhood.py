@@ -62,10 +62,10 @@ def get_lhood(T, edge_to_P, root, root_prior_distn1d, node_to_data_fvec1d):
     """
     root_lhoods = _get_root_lhoods(T, edge_to_P, root,
             root_prior_distn1d, node_to_data_fvec1d)
-    if not root_lhoods.any():
-        return None
-    else:
+    if root_lhoods.any():
         return root_lhoods.sum()
+    else:
+        return None
 
 
 @ddec(params=params)
