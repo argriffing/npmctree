@@ -148,9 +148,11 @@ def _backward(T, edge_to_P, root, root_prior_distn1d, node_to_data_lmap):
                     if prob is not None:
                         partial_likelihoods[s] = prob * lk_obs
         else:
-            partial_likelihoods = lmap_data
+            partial_likelihoods = lmap_data.copy()
         if va == root:
             partial_likelihoods *= root_prior_distn1d
+        if partial_likelihoods.shape != (n,):
+            raise Exception
         v_to_subtree_partial_likelihoods[va] = partial_likelihoods
     return v_to_subtree_partial_likelihoods
 

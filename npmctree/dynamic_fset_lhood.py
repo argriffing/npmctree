@@ -16,7 +16,7 @@ import numpy as np
 import networkx as nx
 
 import npmctree
-from npmctree.util import ddec, make_distn1d, normalized
+from npmctree.util import ddec, make_distn1d, make_distn2d, normalized
 
 __all__ = [
         'get_lhood',
@@ -195,7 +195,7 @@ def _forward_edges(T, edge_to_P, root,
     """
     root_partial_likelihoods = v_to_subtree_partial_likelihoods[root]
     n = root_partial_likelihoods.shape[0]
-    v_to_posterior_distn1d = {root, normalized(root_partial_likelihoods)}
+    v_to_posterior_distn1d = {root : normalized(root_partial_likelihoods)}
     edge_to_J = dict((edge, make_distn2d(n)) for edge in T.edges())
     for edge in nx.bfs_edges(T, root):
         va, vb = edge

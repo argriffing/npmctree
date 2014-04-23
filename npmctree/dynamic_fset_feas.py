@@ -171,7 +171,7 @@ def _backward(T, edge_to_A, root,
         else:
             fvec1d = fvec1d_data.copy()
         if va == root:
-            fvec1d &= root_prior_fvec1d
+            fvec1d = fvec1d & root_prior_fvec1d
         v_to_subtree_fvec1d[va] = fvec1d
     return v_to_subtree_fvec1d
 
@@ -207,7 +207,9 @@ def _state_is_subtree_feasible(edge_to_A,
     s : state under consideration
     """
     for vb in vbs:
-        fvec1d = edge_to_A[va, vb][s] & v_to_subtree_fvec1d[vb]
+        A = edge_to_A[va, vb]
+        subtree_fvec1d = v_to_subtree_fvec1d[vb]
+        fvec1d = A[s] & subtree_fvec1d
         if not np.any(fvec1d):
             return False
     return True
