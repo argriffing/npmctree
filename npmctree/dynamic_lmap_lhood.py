@@ -16,7 +16,7 @@ import numpy as np
 import networkx as nx
 
 import npmctree
-from npmctree.util import ddec
+from npmctree.util import ddec, make_distn1d
 from npmctree.dynamic_fset_lhood import (
         _get_partial_likelihood, _forward_edges, _forward)
 
