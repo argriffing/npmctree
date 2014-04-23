@@ -83,7 +83,7 @@ def get_node_to_distn1d_brute(T, edge_to_P, root,
                 root_prior_distn1d, node_to_state)
         if lk is not None:
             probs = [node_to_data_lmap[v][s] for v, s in node_to_state.items()]
-            lk *= prod(probs)
+            lk *= np.prod(probs)
             for node, state in node_to_state.items():
                 v_to_d[node][state] += lk
     return dict((v, normalized(d)) for v, d in v_to_d.items())
