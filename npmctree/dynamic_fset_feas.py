@@ -15,7 +15,7 @@ from __future__ import division, print_function, absolute_import
 import numpy as np
 import networkx as nx
 
-from nxmctree.util import ddec
+from npmctree.util import ddec, make_fvec1d
 
 __all__ = [
         'get_feas',
@@ -155,60 +155,59 @@ def _backward(T, edge_to_A, root,
 
     """
     v_to_subtree_fvec1d = {}
-    for v in nx.topological_sort(T, [root], reverse=True):
-        fvec1d_data = node_to_data_fvec1d[v]
-        if T[v]:
-            cs = T[v]
+    for va in nx.topological_sort(T, [root], reverse=True):
+        fvec1d_data = node_to_data_fvec1d[va]
+        if T[va]:
+            cs = T[va]
         else:
             cs = set()
         if cs:
-            fset = set()
-            for s in fset_data:
-                if _state_is_subtree_feasible(edge_to_A,
-                        v_to_subtree_fset, v, cs, s):
-                    fset.add(s)
+            fvec1d = make_fvec1d(n)
+            for s, value in enumerate(fvec1d_data):
+                if value and _state_is_subtree_feasible(edge_to_A,
+                        v_to_subtree_fvec1d, va, cs, s):
+                    fvec1d[s] = True
         else:
-            fset = set(fset_data)
-        if v == root:
-            fset &= set(root_prior_fset)
-        v_to_subtree_fset[v] = fset
-    return v_to_subtree_fset
+            fvec1d = fvec1d_data.copy()
+        if va == root:
+            fvec1d &= root_prior_fvec1d
+        v_to_subtree_fvec1d[va] = fvec1d
+    return v_to_subtree_fvec1d
 
 
-def _forward(T, edge_to_A, root, v_to_subtree_fset):
+def _forward(T, edge_to_A, root, v_to_subtree_fvec1d):
     """
     Forward pass.
 
     """
-    v_to_posterior_fset = {}
-    v_to_posterior_fset[root] = set(v_to_subtree_fset[root])
+    root_fvec1d = v_to_subtree_fvec1d[root]
+    n = root_fvec1d.shape[0]
+    v_to_posterior_fvec1d = {root : root_fvec1d.copy()}
     for edge in nx.bfs_edges(T, root):
         va, vb = edge
         A = edge_to_A[edge]
-        fset = set()
-        for s in v_to_posterior_fset[va]:
-            fset.update(set(A[s]) & v_to_subtree_fset[vb])
-        v_to_posterior_fset[vb] = fset
-    return v_to_posterior_fset
+        fvec1d = make_fvec1d(n)
+        for s, value in v_to_posterior_fvec1d[va]:
+            if value:
+                fvec1d |= A[s] & v_to_subtree_fvec1d[vb]
+        v_to_posterior_fvec1d[vb] = fvec1d
+    return v_to_posterior_fvec1d
 
 
 def _state_is_subtree_feasible(edge_to_A,
-        v_to_subtree_fset, v, cs, s):
+        v_to_subtree_fvec1d, va, vbs, s):
     """
     edge_to_A : dict
         A map from directed edges of the tree graph
-        to networkx graphs representing state transition feasibility.
-    v_to_subtree_fset : which states are allowed in child nodes
-    v : node under consideration
-    cs : child nodes of v
+        to 2d bool ndarrays representing state transition feasibility.
+    v_to_subtree_fvec1d : which states are allowed in child nodes
+    va : node under consideration
+    vbs : child nodes of va
     s : state under consideration
     """
-    for c in cs:
-        edge = v, c
-        A = edge_to_A[edge]
-        if s not in A:
-            return False
-        if not set(A[s]) & v_to_subtree_fset[c]:
+    for vb in vbs:
+        fvec1d = edge_to_A[va, c][s] & v_to_subtree_fvec1d[vb]
+        if not np.any(fvec1d):
             return False
     return True
 

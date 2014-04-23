@@ -76,7 +76,7 @@ def get_node_to_distn1d_brute(T, edge_to_P, root,
     {params}
 
     """
-    n = root_prior_distn.shape[0]
+    n = root_prior_distn1d.shape[0]
     nodes = set(node_to_data_fvec1d)
     v_to_d = dict((v, make_distn1d(n)) for v in nodes)
     for node_to_state in gen_plausible_histories(node_to_data_fvec1d):
