@@ -7,18 +7,17 @@ brute force implementations.
 """
 from __future__ import division, print_function, absolute_import
 
+import numpy as np
 from numpy.testing import (run_module_suite, assert_,
         assert_equal, assert_allclose, assert_array_less)
 
-import nxmctree
-from nxmctree.nputil import (
-        assert_dict_distn_allclose, assert_nx_distn_allclose)
-from nxmctree.puzzles import (
+import npmctree
+from npmctree.puzzles import (
         gen_random_fset_systems, gen_random_infeasible_fset_systems,
         gen_random_lmap_systems, gen_random_infeasible_lmap_systems)
-from nxmctree import brute_fset_feas, dynamic_fset_feas
-from nxmctree import brute_fset_lhood, dynamic_fset_lhood
-from nxmctree import brute_lmap_lhood, dynamic_lmap_lhood
+from npmctree import brute_fset_feas, dynamic_fset_feas
+from npmctree import brute_fset_lhood, dynamic_fset_lhood
+from npmctree import brute_lmap_lhood, dynamic_lmap_lhood
 
 
 # function suites for testing
@@ -124,6 +123,23 @@ def test_complete_lmap_density():
     for args in gen_random_lmap_systems(pzero):
         T, e_to_P, r, r_prior, node_data = args
 
+        # Define the set of nodes.
+        nodes = set(node_data)
+
+        # Convert some of the args to use feasibility data
+        # instead of likelihood data.
+        r_prior_0 = np.array(r_prior, dtype=bool)
+        node_data_0 = dict(
+                (v, np.array(x, dtype=bool)) for v, x in node_data.items())
+        e_to_P_0 = dict(
+                (v, np.array(x, dtype=bool)) for v, x in e_to_P.items())
+        args_0 = (T, e_to_P_0, r, r_prior_0, node_data_0)
+
+        # The intermediate complicatedness suite
+        # requires feasibility data but allows continuous prior distribution
+        # and transition probabilities.
+        args_1 = (T, e_to_P, r, r_prior, node_data_0)
+
         for feas_suite, lhood_suite, lmap_suite in (
                 (
                     dynamic_fset_feas.fnsuite,
@@ -141,8 +157,8 @@ def test_complete_lmap_density():
             # Check overall likelihood and feasibility.
             assert_array_less(0, f_lmap_overall(*args))
             assert_array_less(f_lmap_overall(*args), 1)
-            assert_allclose(f_lhood(*args), 1)
-            assert_equal(f_feas(*args), True)
+            assert_allclose(f_lhood(*args_1), 1)
+            assert_equal(f_feas(*args_0), True)
 
             # Check node and edge distributions and feasibility.
             for f_node, f_edge in (
@@ -152,7 +168,7 @@ def test_complete_lmap_density():
 
                 # node info
                 d = f_node(*args)
-                for v in set(node_data):
+                for v in nodes:
                     assert_equal(set(d[v]), set(node_data[v]))
 
                 # edge info
@@ -226,16 +242,16 @@ def test_lmap_dynamic_vs_brute():
             assert_allclose(dynamic, brute)
 
         # state distributions at nodes
-        dynamic = dynamic_lmap_lhood.get_node_to_distn(*args)
-        brute = brute_lmap_lhood.get_node_to_distn_brute(*args)
+        dynamic = dynamic_lmap_lhood.get_node_to_distn1d(*args)
+        brute = brute_lmap_lhood.get_node_to_distn1d_brute(*args)
         for v in set(node_lmap):
-            assert_dict_distn_allclose(dynamic[v], brute[v])
+            assert_allclose(dynamic[v], brute[v])
 
         # joint state distributions at edge endpoints
-        dynamic = dynamic_lmap_lhood.get_edge_to_nxdistn(*args)
-        brute = brute_lmap_lhood.get_edge_to_nxdistn_brute(*args)
+        dynamic = dynamic_lmap_lhood.get_edge_to_distn2d(*args)
+        brute = brute_lmap_lhood.get_edge_to_distn2d_brute(*args)
         for edge in T.edges():
-            assert_nx_distn_allclose(dynamic[edge], brute[edge])
+            assert_allclose(dynamic[edge], brute[edge])
 
         # get simplified data without subtlety in the observations
         simple_node_data = dict(

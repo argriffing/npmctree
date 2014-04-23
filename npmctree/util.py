@@ -9,6 +9,14 @@ import operator
 import numpy as np
 
 
+def isfloatobj(x):
+    return x.dtype in (np.float, np.float32, np.float64)
+
+
+def isboolobj(x):
+    return x.dtype == np.bool
+
+
 def make_fvec1d(n):
     return np.zeros(n, dtype=bool)
 

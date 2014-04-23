@@ -6,10 +6,12 @@ This module is only for testing.
 """
 from __future__ import division, print_function, absolute_import
 
+from warnings import warn
+
 import numpy as np
 
 import npmctree
-from npmctree.util import ddec
+from npmctree.util import ddec, make_fvec1d, make_fvec2d, isboolobj
 from npmctree.history import get_history_feas, gen_plausible_histories
 
 __all__ = [
@@ -40,7 +42,28 @@ params = """\
 
 
 @ddec(params=params)
-def get_feas_brute(T, edge_to_A, root, root_prior_fvec1d, node_to_data_fvec1d):
+def _validated_params(T, edge_to_A, root,
+        root_prior_fvec1d, node_to_data_fvec1d):
+    """
+    """
+    if not all(isboolobj(A) for A in edge_to_A.values()):
+        warn('converting adjacency matrices to bool')
+        edge_to_A = dict((e, A.astype(bool)) for e, A in edge_to_A.items())
+
+    if not isboolobj(root_prior_fvec1d):
+        warn('converting root prior feasibility to bool')
+        root_prior_fvec1d = root_prior_fvec1d.astype(bool)
+
+    if not all(isboolobj(d) for d in node_to_data_fvec1d.values()):
+        warn('converting data arrays to bool')
+        node_to_data_fvec1d = dict(
+                (v, d.astype(bool)) for v, d in node_to_data_fvec1d.items())
+
+    return T, edge_to_A, root, root_prior_fvec1d, node_to_data_fvec1d
+
+
+@ddec(params=params)
+def get_feas_brute(*args):
     """
     Get the feasibility of this combination of parameters.
 
@@ -57,6 +80,9 @@ def get_feas_brute(T, edge_to_A, root, root_prior_fvec1d, node_to_data_fvec1d):
         otherwise False.
 
     """
+    args = _validated_params(*args)
+    T, edge_to_A, root, root_prior_fvec1d, node_to_data_fvec1d = args
+
     for node_to_state in gen_plausible_histories(node_to_data_fvec1d):
         if get_history_feas(T, edge_to_A, root,
                 root_prior_fvec1d, node_to_state):
@@ -65,8 +91,7 @@ def get_feas_brute(T, edge_to_A, root, root_prior_fvec1d, node_to_data_fvec1d):
 
 
 @ddec(params=params)
-def get_node_to_fvec1d_brute(T, edge_to_A, root,
-        root_prior_fvec1d, node_to_data_fvec1d):
+def get_node_to_fvec1d_brute(*args):
     """
     Get the map from node to state feasibility.
 
@@ -82,9 +107,12 @@ def get_node_to_fvec1d_brute(T, edge_to_A, root,
         Map from node to fvec1d of posterior feasible states.
 
     """
+    args = _validated_params(*args)
+    T, edge_to_A, root, root_prior_fvec1d, node_to_data_fvec1d = args
+
     n = root_prior_fvec1d.shape[0]
     nodes = set(node_to_data_fvec1d)
-    v_to_feas = dict((v, np.zeros(n, dtype=bool)) for v in nodes)
+    v_to_feas = dict((v, make_fvec1d(n)) for v in nodes)
     for node_to_state in gen_plausible_histories(node_to_data_fvec1d):
         if get_history_feas(T, edge_to_A, root,
                 root_prior_fvec1d, node_to_state):
@@ -94,8 +122,7 @@ def get_node_to_fvec1d_brute(T, edge_to_A, root,
 
 
 @ddec(params=params)
-def get_edge_to_fvec2d_brute(T, edge_to_A, root,
-        root_prior_fvec1d, node_to_data_fvec1d):
+def get_edge_to_fvec2d_brute(*args):
     """
     Use brute force enumeration over all histories.
 
@@ -112,8 +139,11 @@ def get_edge_to_fvec2d_brute(T, edge_to_A, root,
         along the edge.
 
     """
+    args = _validated_params(*args)
+    T, edge_to_A, root, root_prior_fvec1d, node_to_data_fvec1d = args
+
     n = root_prior_fvec1d.shape[0]
-    edge_to_d = dict((edge, np.zeros((n, n), dtype=bool)) for edge in T.edges())
+    edge_to_d = dict((edge, make_fvec2d(n)) for edge in T.edges())
     for node_to_state in gen_plausible_histories(node_to_data_fvec1d):
         if get_history_feas(T, edge_to_A, root,
                 root_prior_fvec1d, node_to_state):
