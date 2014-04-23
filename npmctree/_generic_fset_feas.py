@@ -1,5 +1,6 @@
 """
 """
+from __future__ import division, print_function, absolute_import
 
 from warnings import warn
 
@@ -27,7 +28,7 @@ params = """\
 
 
 @ddec(params=params)
-def _validated_params(T, edge_to_A, root,
+def validated_params(T, edge_to_A, root,
         root_prior_fvec1d, node_to_data_fvec1d):
     """
     """

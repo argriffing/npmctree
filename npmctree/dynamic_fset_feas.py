@@ -15,7 +15,8 @@ from __future__ import division, print_function, absolute_import
 import numpy as np
 import networkx as nx
 
-from npmctree.util import ddec, make_fvec1d
+from .util import ddec, make_fvec1d
+from ._generic_fset_feas import params, validated_params
 
 __all__ = [
         'get_feas',
@@ -24,29 +25,8 @@ __all__ = [
         ]
 
 
-params = """\
-    T : directed networkx tree graph
-        Edge and node annotations are ignored.
-    edge_to_A : dict
-        A map from directed edges of the tree graph
-        to 2d boolean ndarrays representing state transition feasibility.
-    root : hashable
-        This is the root node.
-        Following networkx convention, this may be anything hashable.
-    root_prior_fvec1d : 1d bool ndarray
-        The set of feasible prior root states.
-        This may be interpreted as the support of the prior state
-        distribution at the root.
-    node_to_data_fvec1d : dict
-        Map from node to set of feasible states.
-        The feasibility could be interpreted as due to restrictions
-        caused by observed data.
-"""
-
-
 @ddec(params=params)
-def get_feas(T, edge_to_A, root,
-        root_prior_fvec1d, node_to_data_fvec1d):
+def get_feas(*args):
     """
     Get the feasibility of this combination of parameters.
 
@@ -61,14 +41,16 @@ def get_feas(T, edge_to_A, root,
         otherwise False.
 
     """
+    args = _validated_params(*args)
+    T, edge_to_A, root, root_prior_fvec1d, node_to_data_fvec1d = args
+
     root_fvec1d = _get_root_fvec1d(T, edge_to_A, root,
             root_prior_fvec1d, node_to_data_fvec1d)
     return np.any(root_fvec1d)
 
 
 @ddec(params=params)
-def get_node_to_fvec1d(T, edge_to_A, root,
-        root_prior_fvec1d, node_to_data_fvec1d):
+def get_node_to_fvec1d(*args):
     """
     For each node get the marginal posterior set of feasible states.
 
@@ -88,6 +70,9 @@ def get_node_to_fvec1d(T, edge_to_A, root,
         Map from node to 1d bool ndarray of posterior feasible states.
 
     """
+    args = _validated_params(*args)
+    T, edge_to_A, root, root_prior_fvec1d, node_to_data_fvec1d = args
+
     v_to_subtree_fvec1d = _backward(T, edge_to_A, root,
             root_prior_fvec1d, node_to_data_fvec1d)
     v_to_posterior_fvec1d = _forward(T, edge_to_A, root,
@@ -96,8 +81,7 @@ def get_node_to_fvec1d(T, edge_to_A, root,
 
 
 @ddec(params=params)
-def get_edge_to_fvec2d(T, edge_to_A, root,
-        root_prior_fvec1d, node_to_data_fvec1d):
+def get_edge_to_fvec2d(*args):
     """
     For each edge, get the joint feasibility of states at edge endpoints.
 
@@ -114,8 +98,10 @@ def get_edge_to_fvec2d(T, edge_to_A, root,
         along the edge.
 
     """
-    v_to_fvec1d = get_node_to_fvec1d(T, edge_to_A, root,
-            root_prior_fvec1d, node_to_data_fvec1d)
+    args = _validated_params(*args)
+    T, edge_to_A, root, root_prior_fvec1d, node_to_data_fvec1d = args
+
+    v_to_fvec1d = get_node_to_fvec1d(*args)
     edge_to_fvec2d = {}
     for edge in nx.bfs_edges(T, root):
         va, vb = edge
