@@ -188,7 +188,7 @@ def _forward(T, edge_to_A, root, v_to_subtree_fvec1d):
         va, vb = edge
         A = edge_to_A[edge]
         fvec1d = make_fvec1d(n)
-        for s, value in v_to_posterior_fvec1d[va]:
+        for s, value in enumerate(v_to_posterior_fvec1d[va]):
             if value:
                 fvec1d |= A[s] & v_to_subtree_fvec1d[vb]
         v_to_posterior_fvec1d[vb] = fvec1d
@@ -207,7 +207,7 @@ def _state_is_subtree_feasible(edge_to_A,
     s : state under consideration
     """
     for vb in vbs:
-        fvec1d = edge_to_A[va, c][s] & v_to_subtree_fvec1d[vb]
+        fvec1d = edge_to_A[va, vb][s] & v_to_subtree_fvec1d[vb]
         if not np.any(fvec1d):
             return False
     return True
