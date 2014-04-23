@@ -54,7 +54,7 @@ def get_lhood_brute(T, edge_to_P, root, root_prior_distn1d, node_to_data_lmap):
                 root_prior_distn1d, node_to_state)
         if lk is not None:
             probs = [node_to_data_lmap[v][s] for v, s in node_to_state.items()]
-            lk *= prod(probs)
+            lk *= np.prod(probs)
             if lk_total is None:
                 lk_total = lk
             else:
