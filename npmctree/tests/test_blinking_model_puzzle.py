@@ -11,16 +11,15 @@ The observation likelihoods for the hidden states are more interesting.
 from __future__ import division, print_function, absolute_import
 
 import math
-from itertools import product
 
 import networkx as nx
+import numpy as np
+from numpy.testing import assert_allclose
 
-from nxmctree.nputil import (
-        assert_dict_distn_allclose, assert_nx_distn_allclose)
-from nxmctree.dynamic_lmap_lhood import (
-        get_node_to_distn, get_edge_to_nxdistn)
-from nxmctree.brute_lmap_lhood import (
-        get_node_to_distn_brute, get_edge_to_nxdistn_brute)
+from npmctree.dynamic_lmap_lhood import (
+        get_node_to_distn1d, get_edge_to_distn2d)
+from npmctree.brute_lmap_lhood import (
+        get_node_to_distn1d_brute, get_edge_to_distn2d_brute)
 
 
 def exp_neg(x):
@@ -31,29 +30,26 @@ def get_blinking_model(omega):
     T = nx.DiGraph()
     T.add_edge('N1', 'N0')
     T.add_edge('N1', 'N2')
-    P = nx.DiGraph()
-    P.add_weighted_edges_from([
-            (False, False, 1 - 1/omega),
-            (False, True, 1/omega),
-            (True, False, 1/omega),
-            (True, True, 1 - 1/omega),
-            ])
+    P = np.array([
+        [1 - 1/omega, 1/omega],
+        [1/omega, 1 - 1/omega],
+        ], dtype=float)
     edge_to_P = dict((v, P) for v in T.edges())
     root = 'N1'
-    root_prior_distn = {False : 1/2, True : 1/2}
+    root_prior_distn = np.array([1/2, 1/2], dtype=float)
     node_to_data_lmap = {
-            'N0' : {
-                False : exp_neg(0.25*(2/14)),
-                True : exp_neg(0.25*(2/14)),
-                },
-            'N1': {
-                False : exp_neg(0.85*(2/14) + 0.25*(2/14)),
-                True : exp_neg(0.85*(2/14) + 0.25*(3/14)),
-                },
-            'N2' : {
-                False : exp_neg(1.125*(2/14)),
-                True : exp_neg(1.125*(3/14)),
-                }
+            'N0' : np.array([
+                    exp_neg(0.25*(2/14)),
+                    exp_neg(0.25*(2/14)),
+                    ]),
+            'N1': np.array([
+                    exp_neg(0.85*(2/14) + 0.25*(2/14)),
+                    exp_neg(0.85*(2/14) + 0.25*(3/14)),
+                    ]),
+            'N2' : np.array([
+                    exp_neg(1.125*(2/14)),
+                    exp_neg(1.125*(3/14)),
+                    ]),
             }
     return T, edge_to_P, root, root_prior_distn, node_to_data_lmap
 
@@ -64,20 +60,20 @@ def test_blinking_model_chain():
         T, edge_to_P, root, root_prior_distn, node_to_data_lmap = args
 
         # posterior transitions on edges
-        post_dynamic_map = get_edge_to_nxdistn(*args)
-        post_brute_map = get_edge_to_nxdistn_brute(*args)
+        post_dynamic_map = get_edge_to_distn2d(*args)
+        post_brute_map = get_edge_to_distn2d_brute(*args)
         for edge in T.edges():
             va, vb = edge
             post_distn_dynamic = post_dynamic_map[edge]
             post_distn_brute = post_brute_map[edge]
-            assert_nx_distn_allclose(post_distn_dynamic, post_distn_brute)
+            assert_allclose(post_distn_dynamic, post_distn_brute)
 
         # posterior distributions at nodes
-        post_dynamic_map = get_node_to_distn(*args)
-        post_brute_map = get_node_to_distn_brute(*args)
+        post_dynamic_map = get_node_to_distn1d(*args)
+        post_brute_map = get_node_to_distn1d_brute(*args)
         for v in T:
             post_distn_dynamic = post_dynamic_map[v]
             post_distn_brute = post_brute_map[v]
-            assert_dict_distn_allclose(post_distn_dynamic, post_distn_brute)
+            assert_allclose(post_distn_dynamic, post_distn_brute)
 
 
