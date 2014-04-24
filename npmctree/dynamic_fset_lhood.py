@@ -224,7 +224,10 @@ def _get_partial_likelihood(edge_to_P,
         P = edge_to_P[va, vb]
         p = np.dot(P[s], v_to_subtree_partial_likelihoods[vb])
         probs.append(p)
-    return np.prod(probs)
+    if np.any(probs):
+        return np.prod(probs)
+    else:
+        return None
 
 
 # function suite for testing
