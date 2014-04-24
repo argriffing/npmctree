@@ -163,13 +163,13 @@ def test_complete_lmap_density():
                 # node info
                 d = f_node(*args)
                 for v in nodes:
-                    assert_equal(set(d[v]), set(node_data[v]))
+                    assert_equal(d[v].astype(bool), node_data[v].astype(bool))
 
                 # edge info
                 d = f_edge(*args)
                 for edge in T.edges():
-                    observed_edges = set(d[edge].edges())
-                    desired_edges = set(e_to_P[edge].edges())
+                    observed_edges = d[edge].astype(bool)
+                    desired_edges = e_to_P[edge].astype(bool)
                     assert_equal(observed_edges, desired_edges)
 
 
