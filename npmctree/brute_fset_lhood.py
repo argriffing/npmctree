@@ -11,7 +11,7 @@ import numpy as np
 from .util import ddec, make_distn1d, make_distn2d, normalized
 from .history import (
         get_history_feas, get_history_lhood, gen_plausible_histories)
-from ._generic_fset_feas import params, validated_params
+from ._generic_fset_lhood import params, validated_params
 
 __all__ = [
         'get_lhood_brute',
@@ -32,8 +32,8 @@ def get_lhood_brute(*args):
     {params}
 
     """
-    args = _validated_params(*args)
-    T, edge_to_A, root, root_prior_distn1d, node_to_data_fvec1d = args
+    args = validated_params(*args)
+    T, edge_to_P, root, root_prior_distn1d, node_to_data_fvec1d = args
 
     lk_total = None
     for node_to_state in gen_plausible_histories(node_to_data_fvec1d):
@@ -59,8 +59,8 @@ def get_node_to_distn1d_brute(*args):
     {params}
 
     """
-    args = _validated_params(*args)
-    T, edge_to_A, root, root_prior_distn1d, node_to_data_fvec1d = args
+    args = validated_params(*args)
+    T, edge_to_P, root, root_prior_distn1d, node_to_data_fvec1d = args
 
     n = root_prior_distn1d.shape[0]
     nodes = set(node_to_data_fvec1d)
@@ -83,8 +83,8 @@ def get_edge_to_distn2d_brute(*args):
     {params}
 
     """
-    args = _validated_params(*args)
-    T, edge_to_A, root, root_prior_distn1d, node_to_data_fvec1d = args
+    args = validated_params(*args)
+    T, edge_to_P, root, root_prior_distn1d, node_to_data_fvec1d = args
 
     n = root_prior_distn1d.shape[0]
     edge_to_d = dict((edge, make_distn2d(n)) for edge in T.edges())

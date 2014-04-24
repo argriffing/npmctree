@@ -12,6 +12,7 @@ import npmctree
 from npmctree.util import ddec, make_distn1d, make_distn2d, normalized
 from npmctree.history import (
         get_history_feas, get_history_lhood, gen_plausible_histories)
+from ._generic_lmap_lhood import params, validated_params
 
 __all__ = [
         'get_lhood_brute',
@@ -20,24 +21,8 @@ __all__ = [
         ]
 
 
-params = """\
-    T : directed networkx tree graph
-        Edge and node annotations are ignored.
-    edge_to_adjacency : dict
-        A map from directed edges of the tree graph
-        to networkx graphs representing state transition feasibility.
-    root : hashable
-        This is the root node.
-        Following networkx convention, this may be anything hashable.
-    root_prior_distn1d : dict
-        Prior state distribution at the root.
-    node_to_data_lmap : dict
-        For each node, a map from state to observation likelihood.
-"""
-
-
 @ddec(params=params)
-def get_lhood_brute(T, edge_to_P, root, root_prior_distn1d, node_to_data_lmap):
+def get_lhood_brute(*args):
     """
     Get the likelihood of this combination of parameters.
 
@@ -48,6 +33,9 @@ def get_lhood_brute(T, edge_to_P, root, root_prior_distn1d, node_to_data_lmap):
     {params}
 
     """
+    args = validated_params(*args)
+    T, edge_to_P, root, root_prior_distn1d, node_to_data_lmap = args
+
     lk_total = None
     for node_to_state in gen_plausible_histories(node_to_data_lmap):
         lk = get_history_lhood(T, edge_to_P, root,
@@ -63,8 +51,7 @@ def get_lhood_brute(T, edge_to_P, root, root_prior_distn1d, node_to_data_lmap):
 
 
 @ddec(params=params)
-def get_node_to_distn1d_brute(T, edge_to_P, root,
-        root_prior_distn1d, node_to_data_lmap):
+def get_node_to_distn1d_brute(*args):
     """
     Get the map from node to state distribution.
 
@@ -75,6 +62,9 @@ def get_node_to_distn1d_brute(T, edge_to_P, root,
     {params}
 
     """
+    args = validated_params(*args)
+    T, edge_to_P, root, root_prior_distn1d, node_to_data_lmap = args
+
     n = root_prior_distn1d.shape[0]
     nodes = set(node_to_data_lmap)
     v_to_d = dict((v, make_distn1d(n)) for v in nodes)
@@ -90,8 +80,7 @@ def get_node_to_distn1d_brute(T, edge_to_P, root,
 
 
 @ddec(params=params)
-def get_edge_to_distn2d_brute(T, edge_to_P, root,
-        root_prior_distn1d, node_to_data_lmap):
+def get_edge_to_distn2d_brute(*args):
     """
 
     Parameters
@@ -99,6 +88,9 @@ def get_edge_to_distn2d_brute(T, edge_to_P, root,
     {params}
 
     """
+    args = validated_params(*args)
+    T, edge_to_P, root, root_prior_distn1d, node_to_data_lmap = args
+
     n = root_prior_distn1d.shape[0]
     edge_to_d = dict((edge, make_distn2d(n)) for edge in T.edges())
     for node_to_state in gen_plausible_histories(node_to_data_lmap):

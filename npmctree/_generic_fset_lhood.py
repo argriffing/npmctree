@@ -4,7 +4,7 @@ from __future__ import division, print_function, absolute_import
 
 from warnings import warn
 
-from .util import isboolobj
+from .util import ddec, isboolobj
 
 
 params = """\

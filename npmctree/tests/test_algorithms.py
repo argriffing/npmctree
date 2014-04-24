@@ -9,7 +9,7 @@ from __future__ import division, print_function, absolute_import
 
 import numpy as np
 from numpy.testing import (run_module_suite, assert_,
-        assert_equal, assert_allclose, assert_array_less)
+        assert_equal, assert_allclose, assert_array_less, assert_array_equal)
 
 import npmctree
 from npmctree.puzzles import (
@@ -40,21 +40,18 @@ def test_infeasible_fset_systems():
         for f_overall, f_node, f_edge in fset_suites:
 
             # overall likelihood or feasibility
-            overall_info = f_overall(*args)
-            edge_info = [(e, P.edges()) for e, P in e_to_P.items()]
-            msg = str((T.edges(), edge_info, r, r_prior, node_feas))
-            if overall_info:
-                raise Exception(msg)
-            assert_(not overall_info)
+            scalar_summary = f_overall(*args)
+            assert_(not scalar_summary)
 
             # state distributions or feasible sets at nodes
             node_info = f_node(*args)
-            assert_(not any(node_info.values()))
+            for d in node_info.values():
+                assert_(not d.any())
 
             # joint state distributions at edge endpoints
             edge_info = f_edge(*args)
             for edge in T.edges():
-                assert_(not edge_info[edge].edges())
+                assert_(not edge_info[edge].any())
 
 
 def test_infeasible_lmap_systems():
@@ -65,21 +62,18 @@ def test_infeasible_lmap_systems():
         for f_overall, f_node, f_edge in all_suites:
 
             # overall likelihood or feasibility
-            overall_info = f_overall(*args)
-            edge_info = [(e, P.edges()) for e, P in e_to_P.items()]
-            msg = str((T.edges(), edge_info, r, r_prior, node_data))
-            if overall_info:
-                raise Exception(msg)
-            assert_(not overall_info)
+            scalar_summary = f_overall(*args)
+            assert_(not scalar_summary)
 
             # state distributions or feasible sets at nodes
             node_info = f_node(*args)
-            assert_(not any(node_info.values()))
+            for d in node_info.values():
+                assert_(not d.any())
 
             # joint state distributions at edge endpoints
             edge_info = f_edge(*args)
             for edge in T.edges():
-                assert_(not edge_info[edge].edges())
+                assert_(not edge_info[edge].any())
 
 
 def test_complete_fset_density():
@@ -107,14 +101,14 @@ def test_complete_fset_density():
                 # node info
                 d = f_node(*args)
                 for v in set(node_feas):
-                    assert_equal(set(d[v]), set(node_feas[v]))
+                    assert_equal(d[v].astype(bool), node_feas[v].astype(bool))
 
                 # edge info
                 d = f_edge(*args)
                 for edge in T.edges():
-                    observed_edges = set(d[edge].edges())
-                    desired_edges = set(e_to_P[edge].edges())
-                    assert_equal(observed_edges, desired_edges)
+                    observed_edges = d[edge].astype(bool)
+                    desired_edges = e_to_P[edge].astype(bool)
+                    assert_array_equal(observed_edges, desired_edges)
 
 
 def test_complete_lmap_density():
@@ -200,30 +194,30 @@ def test_fset_dynamic_vs_brute():
         assert_equal(dynamic, brute)
 
         # state distributions at nodes
-        dynamic = dynamic_fset_lhood.get_node_to_distn(*args)
-        brute = brute_fset_lhood.get_node_to_distn_brute(*args)
+        dynamic = dynamic_fset_lhood.get_node_to_distn1d(*args)
+        brute = brute_fset_lhood.get_node_to_distn1d_brute(*args)
         for v in set(node_feas):
-            assert_dict_distn_allclose(dynamic[v], brute[v])
+            assert_allclose(dynamic[v], brute[v])
 
         # state feasibility at nodes
-        dynamic = dynamic_fset_feas.get_node_to_fset(*args)
-        brute = brute_fset_feas.get_node_to_fset_brute(*args)
+        dynamic = dynamic_fset_feas.get_node_to_fvec1d(*args)
+        brute = brute_fset_feas.get_node_to_fvec1d_brute(*args)
         for v in set(node_feas):
             assert_equal(dynamic[v], brute[v])
 
         # joint state distributions at edge endpoints
-        dynamic = dynamic_fset_lhood.get_edge_to_nxdistn(*args)
-        brute = brute_fset_lhood.get_edge_to_nxdistn_brute(*args)
+        dynamic = dynamic_fset_lhood.get_edge_to_distn2d(*args)
+        brute = brute_fset_lhood.get_edge_to_distn2d_brute(*args)
         for edge in T.edges():
-            assert_nx_distn_allclose(dynamic[edge], brute[edge])
+            assert_allclose(dynamic[edge], brute[edge])
 
         # joint state feasibility at edge endpoints
-        dynamic = dynamic_fset_feas.get_edge_to_nxfset(*args)
-        brute = brute_fset_feas.get_edge_to_nxfset_brute(*args)
+        dynamic = dynamic_fset_feas.get_edge_to_fvec2d(*args)
+        brute = brute_fset_feas.get_edge_to_fvec2d_brute(*args)
         for edge in T.edges():
-            dynamic_edges = set(dynamic[edge].edges())
-            brute_edges = set(brute[edge].edges())
-            assert_equal(dynamic_edges, brute_edges)
+            dynamic_edges = dynamic[edge].astype(bool)
+            brute_edges = brute[edge].astype(bool)
+            assert_array_equal(dynamic_edges, brute_edges)
 
 
 def test_lmap_dynamic_vs_brute():
@@ -255,7 +249,7 @@ def test_lmap_dynamic_vs_brute():
 
         # get simplified data without subtlety in the observations
         simple_node_data = dict(
-                (v, dict((k, 1) for k in d)) for v, d in node_lmap.items())
+                (v, d.astype(bool).astype(float)) for v, d in node_lmap.items())
 
         simple_args = (T, e_to_P, r, r_prior, simple_node_data)
 
@@ -275,22 +269,22 @@ def test_lmap_dynamic_vs_brute():
             assert_allclose(brute_lmap, brute_fset)
 
         # simplified data state distributions at nodes
-        dynamic_fset = dynamic_fset_lhood.get_node_to_distn(*simple_args)
-        brute_fset = brute_fset_lhood.get_node_to_distn_brute(*simple_args)
-        dynamic_lmap = dynamic_lmap_lhood.get_node_to_distn(*simple_args)
-        brute_lmap = brute_lmap_lhood.get_node_to_distn_brute(*simple_args)
+        dynamic_fset = dynamic_fset_lhood.get_node_to_distn1d(*simple_args)
+        brute_fset = brute_fset_lhood.get_node_to_distn1d_brute(*simple_args)
+        dynamic_lmap = dynamic_lmap_lhood.get_node_to_distn1d(*simple_args)
+        brute_lmap = brute_lmap_lhood.get_node_to_distn1d_brute(*simple_args)
         for v in set(simple_node_data):
-            assert_dict_distn_allclose(dynamic_fset[v], brute_fset[v])
-            assert_dict_distn_allclose(dynamic_lmap[v], brute_fset[v])
-            assert_dict_distn_allclose(brute_lmap[v], brute_fset[v])
+            assert_allclose(dynamic_fset[v], brute_fset[v])
+            assert_allclose(dynamic_lmap[v], brute_fset[v])
+            assert_allclose(brute_lmap[v], brute_fset[v])
 
         # simplified data joint state distributions at edge endpoints
-        dynamic_fset = dynamic_fset_lhood.get_edge_to_nxdistn(*simple_args)
-        brute_fset = brute_fset_lhood.get_edge_to_nxdistn_brute(*simple_args)
-        dynamic_lmap = dynamic_lmap_lhood.get_edge_to_nxdistn(*simple_args)
-        brute_lmap = brute_lmap_lhood.get_edge_to_nxdistn_brute(*simple_args)
+        dynamic_fset = dynamic_fset_lhood.get_edge_to_distn2d(*simple_args)
+        brute_fset = brute_fset_lhood.get_edge_to_distn2d_brute(*simple_args)
+        dynamic_lmap = dynamic_lmap_lhood.get_edge_to_distn2d(*simple_args)
+        brute_lmap = brute_lmap_lhood.get_edge_to_distn2d_brute(*simple_args)
         for edge in T.edges():
-            assert_nx_distn_allclose(dynamic_fset[edge], brute_fset[edge])
-            assert_nx_distn_allclose(dynamic_lmap[edge], brute_fset[edge])
-            assert_nx_distn_allclose(brute_lmap[edge], brute_fset[edge])
+            assert_allclose(dynamic_fset[edge], brute_fset[edge])
+            assert_allclose(dynamic_lmap[edge], brute_fset[edge])
+            assert_allclose(brute_lmap[edge], brute_fset[edge])
 

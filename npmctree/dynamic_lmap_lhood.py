@@ -19,6 +19,7 @@ import npmctree
 from npmctree.util import ddec, make_distn1d
 from npmctree.dynamic_fset_lhood import (
         _get_partial_likelihood, _forward_edges, _forward)
+from ._generic_lmap_lhood import params, validated_params
 
 __all__ = [
         'get_lhood',
@@ -27,24 +28,8 @@ __all__ = [
         ]
 
 
-params = """\
-    T : directed networkx tree graph
-        Edge and node annotations are ignored.
-    edge_to_P : dict
-        A map from directed edges of the tree graph
-        to networkx graphs representing state transition probability.
-    root : hashable
-        This is the root node.
-        Following networkx convention, this may be anything hashable.
-    root_prior_distn : dict
-        Prior state distribution at the root.
-    node_to_data_lmap : dict
-        For each node, a map from state to observation likelihood.
-"""
-
-
 @ddec(params=params)
-def get_lhood(T, edge_to_P, root, root_prior_distn1d, node_to_data_lmap):
+def get_lhood(*args):
     """
     Get the likelihood of this combination of parameters.
 
@@ -59,8 +44,10 @@ def get_lhood(T, edge_to_P, root, root_prior_distn1d, node_to_data_lmap):
         return the likelihood, otherwise None.
 
     """
-    root_lhoods = _get_root_lhoods(T, edge_to_P, root,
-            root_prior_distn1d, node_to_data_lmap)
+    args = validated_params(*args)
+    T, edge_to_P, root, root_prior_distn1d, node_to_data_lmap = args
+
+    root_lhoods = _get_root_lhoods(*args)
     if root_lhoods.any():
         return root_lhoods.sum()
     else:
@@ -68,8 +55,7 @@ def get_lhood(T, edge_to_P, root, root_prior_distn1d, node_to_data_lmap):
 
 
 @ddec(params=params)
-def get_node_to_distn1d(T, edge_to_P, root,
-        root_prior_distn1d, node_to_data_lmap):
+def get_node_to_distn1d(*args):
     """
     Get the map from node to state distribution.
 
@@ -78,16 +64,17 @@ def get_node_to_distn1d(T, edge_to_P, root,
     {params}
 
     """
-    v_to_subtree_partial_likelihoods = _backward(T, edge_to_P, root,
-            root_prior_distn1d, node_to_data_lmap)
+    args = validated_params(*args)
+    T, edge_to_P, root, root_prior_distn1d, node_to_data_lmap = args
+
+    v_to_subtree_partial_likelihoods = _backward(*args)
     v_to_posterior_distn1d = _forward(T, edge_to_P, root,
             v_to_subtree_partial_likelihoods)
     return v_to_posterior_distn1d
 
 
 @ddec(params=params)
-def get_edge_to_distn2d(T, edge_to_P, root,
-        root_prior_distn1d, node_to_data_lmap):
+def get_edge_to_distn2d(*args):
     """
     Get the map from edge to joint state distribution at endpoint nodes.
 
@@ -96,8 +83,10 @@ def get_edge_to_distn2d(T, edge_to_P, root,
     {params}
 
     """
-    v_to_subtree_partial_likelihoods = _backward(T, edge_to_P, root,
-            root_prior_distn1d, node_to_data_lmap)
+    args = validated_params(*args)
+    T, edge_to_P, root, root_prior_distn1d, node_to_data_lmap = args
+
+    v_to_subtree_partial_likelihoods = _backward(*args)
     edge_to_J = _forward_edges(T, edge_to_P, root,
             v_to_subtree_partial_likelihoods)
     return edge_to_J

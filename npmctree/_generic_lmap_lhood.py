@@ -2,6 +2,8 @@
 """
 from __future__ import division, print_function, absolute_import
 
+from .util import ddec
+
 
 params = """\
     T : directed networkx tree graph

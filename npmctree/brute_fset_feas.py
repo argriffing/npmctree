@@ -37,7 +37,7 @@ def get_feas_brute(*args):
         otherwise False.
 
     """
-    args = _validated_params(*args)
+    args = validated_params(*args)
     T, edge_to_A, root, root_prior_fvec1d, node_to_data_fvec1d = args
 
     for node_to_state in gen_plausible_histories(node_to_data_fvec1d):
@@ -64,7 +64,7 @@ def get_node_to_fvec1d_brute(*args):
         Map from node to fvec1d of posterior feasible states.
 
     """
-    args = _validated_params(*args)
+    args = validated_params(*args)
     T, edge_to_A, root, root_prior_fvec1d, node_to_data_fvec1d = args
 
     n = root_prior_fvec1d.shape[0]
@@ -96,7 +96,7 @@ def get_edge_to_fvec2d_brute(*args):
         along the edge.
 
     """
-    args = _validated_params(*args)
+    args = validated_params(*args)
     T, edge_to_A, root, root_prior_fvec1d, node_to_data_fvec1d = args
 
     n = root_prior_fvec1d.shape[0]

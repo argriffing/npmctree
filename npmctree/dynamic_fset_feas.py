@@ -41,7 +41,7 @@ def get_feas(*args):
         otherwise False.
 
     """
-    args = _validated_params(*args)
+    args = validated_params(*args)
     T, edge_to_A, root, root_prior_fvec1d, node_to_data_fvec1d = args
 
     root_fvec1d = _get_root_fvec1d(T, edge_to_A, root,
@@ -70,7 +70,7 @@ def get_node_to_fvec1d(*args):
         Map from node to 1d bool ndarray of posterior feasible states.
 
     """
-    args = _validated_params(*args)
+    args = validated_params(*args)
     T, edge_to_A, root, root_prior_fvec1d, node_to_data_fvec1d = args
 
     v_to_subtree_fvec1d = _backward(T, edge_to_A, root,
@@ -98,7 +98,7 @@ def get_edge_to_fvec2d(*args):
         along the edge.
 
     """
-    args = _validated_params(*args)
+    args = validated_params(*args)
     T, edge_to_A, root, root_prior_fvec1d, node_to_data_fvec1d = args
 
     v_to_fvec1d = get_node_to_fvec1d(*args)

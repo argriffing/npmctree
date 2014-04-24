@@ -17,7 +17,7 @@ import networkx as nx
 
 import npmctree
 from npmctree.util import ddec, make_distn1d, make_distn2d, normalized
-from ._generic_fset_feas import params, validated_params
+from ._generic_fset_lhood import params, validated_params
 
 __all__ = [
         'get_lhood',
@@ -27,7 +27,7 @@ __all__ = [
 
 
 @ddec(params=params)
-def get_lhood(T, edge_to_P, root, root_prior_distn1d, node_to_data_fvec1d):
+def get_lhood(*args):
     """
     Get the likelihood of this combination of parameters.
 
@@ -42,8 +42,8 @@ def get_lhood(T, edge_to_P, root, root_prior_distn1d, node_to_data_fvec1d):
         return the likelihood, otherwise None.
 
     """
-    args = _validated_params(*args)
-    T, edge_to_A, root, root_prior_distn1d, node_to_data_fvec1d = args
+    args = validated_params(*args)
+    T, edge_to_P, root, root_prior_distn1d, node_to_data_fvec1d = args
 
     root_lhoods = _get_root_lhoods(*args)
     if root_lhoods.any():
@@ -53,8 +53,7 @@ def get_lhood(T, edge_to_P, root, root_prior_distn1d, node_to_data_fvec1d):
 
 
 @ddec(params=params)
-def get_node_to_distn1d(T, edge_to_P, root,
-        root_prior_distn1d, node_to_data_fvec1d):
+def get_node_to_distn1d(*args):
     """
     Get the map from node to state distribution.
 
@@ -63,8 +62,8 @@ def get_node_to_distn1d(T, edge_to_P, root,
     {params}
 
     """
-    args = _validated_params(*args)
-    T, edge_to_A, root, root_prior_distn1d, node_to_data_fvec1d = args
+    args = validated_params(*args)
+    T, edge_to_P, root, root_prior_distn1d, node_to_data_fvec1d = args
 
     v_to_subtree_partial_likelihoods = _backward(*args)
     v_to_posterior_distn1d = _forward(T, edge_to_P, root,
@@ -73,8 +72,7 @@ def get_node_to_distn1d(T, edge_to_P, root,
 
 
 @ddec(params=params)
-def get_edge_to_distn2d(T, edge_to_P, root,
-        root_prior_distn1d, node_to_data_fvec1d):
+def get_edge_to_distn2d(*args):
     """
     Get the map from edge to joint state distribution at endpoint nodes.
 
@@ -83,8 +81,8 @@ def get_edge_to_distn2d(T, edge_to_P, root,
     {params}
 
     """
-    args = _validated_params(*args)
-    T, edge_to_A, root, root_prior_distn1d, node_to_data_fvec1d = args
+    args = validated_params(*args)
+    T, edge_to_P, root, root_prior_distn1d, node_to_data_fvec1d = args
 
     v_to_subtree_partial_likelihoods = _backward(*args)
     edge_to_J = _forward_edges(T, edge_to_P, root,
