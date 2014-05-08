@@ -61,16 +61,16 @@ def get_data_constraints(nodes, pair_to_state):
     return per_site_constraints, npaired_yes, npaired_no
 
 
-def get_tree_info():
+def get_tree_info(common_blen):
     T = nx.DiGraph()
     edge_to_blen = {}
     root = 'N1'
     triples = (
-            ('N1', 'N0', 0.4),
-            ('N1', 'N2', 0.4),
-            ('N1', 'N5', 0.4),
-            ('N2', 'N3', 0.4),
-            ('N2', 'N4', 0.4))
+            ('N1', 'N0', common_blen),
+            ('N1', 'N2', common_blen),
+            ('N1', 'N5', common_blen),
+            ('N2', 'N3', common_blen),
+            ('N2', 'N4', common_blen))
     for va, vb, blen in triples:
         edge = (va, vb)
         T.add_edge(*edge)
@@ -198,7 +198,7 @@ def main(args):
     Q, root_distn = get_Q_and_distn(nt_pairs, phi)
 
     # get the tree info
-    T, root, edge_to_blen = get_tree_info()
+    T, root, edge_to_blen = get_tree_info(0.4)
     nodes = set(T)
     leaves = set(v for v, degree in T.degree().items() if degree == 1)
     not_leaves = nodes - leaves
@@ -257,13 +257,14 @@ def main(args):
     # Use the data summary to get a preliminary estimate of phi.
     # This would be the correct estimate if branch lengths were zero,
     # using a back of the envelope calculation.
-    print('paralog site matches   :', npaired_yes)
+    print('paralog site matches :', npaired_yes)
     print('paralog site mismatches:', npaired_no)
     nsmall = 4
     pa = npaired_yes * (nsmall - 1)
     pb = npaired_no
     phi_hat = pa / pb
     print('preliminary estimate of phi:', phi_hat)
+    print('negative log likelihood of preliminary estimate:', f([phi_hat]))
 
     # get the max likelihood estimate of phi
     result = scipy.optimize.minimize(
@@ -287,7 +288,7 @@ def main_inference(args):
     phi = args.phi
 
     # get the tree info
-    T, root, edge_to_blen = get_tree_info()
+    T, root, edge_to_blen = get_tree_info(0.1)
     nodes = set(T)
     leaves = set(v for v, degree in T.degree().items() if degree == 1)
 
@@ -334,7 +335,7 @@ def main_sample(args):
     Q, root_distn = get_Q_and_distn(nt_pairs, phi)
 
     # get the tree info
-    T, root, edge_to_blen = get_tree_info()
+    T, root, edge_to_blen = get_tree_info(0.1)
     nodes = set(T)
     leaves = set(v for v, degree in T.degree().items() if degree == 1)
 
