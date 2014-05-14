@@ -1,12 +1,14 @@
 Example usage
 -------------
 
-    $ python sample.py --n=500 > sim.data
-    $ python infer.py --seqdata=sim.data
+```
+$ python sample.py --n=500 > sim.data
+$ python infer.py --seqdata=sim.data
+```
 
 Here's an example `sim.data` file:
 
-```json
+```javascript
 {
     "seqdata": [
         {
@@ -67,14 +69,16 @@ If you get some spam when you import networkx with Python 2
 
 This is an annoying message printed from within pydot.
 
- * uninstall networkx
- * uninstall pyparsing
- * uninstall pydot
+uninstall networkx
+uninstall pyparsing
+uninstall pydot
 
 Install an old version of pyparsing (see http://stackoverflow.com/questions/15951748/pydot-and-graphviz-error-couldnt-import-dot-parser-loading-of-dot-files-will):
 
-    pip install --user https://pypi.python.org/packages/source/p/pyparsing/pyparsing-1.5.7.tar.gz#md5=9be0fcdcc595199c646ab317c1d9a709
+```
+$ pip install --user https://pypi.python.org/packages/source/p/pyparsing/pyparsing-1.5.7.tar.gz#md5=9be0fcdcc595199c646ab317c1d9a709
+```
 
- * install pydot
- * install networkx
+install pydot
+install networkx
 
