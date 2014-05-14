@@ -8,7 +8,7 @@ $ python infer.py --seqdata=sim.data
 
 Here's an example `sim.data` file:
 
-```javascript
+```json
 {
     "seqdata": [
         {
@@ -61,7 +61,7 @@ If the example takes longer than a few seconds
 ---------------------------------------
 
 Maybe you don't have a good BLAS installed.
-Try installing OpenBLAS.
+ * Try installing OpenBLAS.
 
 
 If you get some spam when you import networkx with Python 2
@@ -69,9 +69,9 @@ If you get some spam when you import networkx with Python 2
 
 This is an annoying message printed from within pydot.
 
-uninstall networkx
-uninstall pyparsing
-uninstall pydot
+ * uninstall networkx
+ * uninstall pyparsing
+ * uninstall pydot
 
 Install an old version of pyparsing (see http://stackoverflow.com/questions/15951748/pydot-and-graphviz-error-couldnt-import-dot-parser-loading-of-dot-files-will):
 
@@ -79,6 +79,6 @@ Install an old version of pyparsing (see http://stackoverflow.com/questions/1595
 $ pip install --user https://pypi.python.org/packages/source/p/pyparsing/pyparsing-1.5.7.tar.gz#md5=9be0fcdcc595199c646ab317c1d9a709
 ```
 
-install pydot
-install networkx
+ * install pydot
+ * install networkx
 
