@@ -96,17 +96,38 @@ def get_pre_Q(nt_pairs, phi):
     return pre_Q
 
 
+def get_distn_clever(phi, nt_pairs):
+    """
+    Use a clever guess which can be checked later.
+
+    """
+    root_distn = []
+    for nt0, nt1 in nt_pairs:
+        root_distn.append(phi if nt0 == nt1 else 1)
+    root_distn = np.array(root_distn) / sum(root_distn)
+    return root_distn
+
+def get_distn_brute(Q):
+    """
+    This method is slow for huge matrices;
+    for huge matrices use something like the ARPACK-based methods
+    like scipy.sparse.linalg with scipy.sparse rate matrices.
+
+    """
+    w, v = scipy.sparse.linalg.eigs(Q.T, k=1, which='SM')
+    weights = v[:, 0].real
+    distn = weights / weights.sum()
+    return distn
+
 def get_Q_and_distn(nt_pairs, phi):
 
     # Define the unnormalized rate matrix with negative diagonal.
     pre_Q = get_pre_Q(nt_pairs, phi)
     unnormalized_Q = pre_Q - np.diag(pre_Q.sum(axis=1))
 
-    # Guess the stationary distribution.
-    root_distn = []
-    for nt0, nt1 in nt_pairs:
-        root_distn.append(phi if nt0 == nt1 else 1)
-    root_distn = np.array(root_distn) / sum(root_distn)
+    # Compute the stationary distribution.
+    #root_distn = get_distn_clever(phi, nt_pairs)
+    root_distn = get_distn_brute(unnormalized_Q)
 
     # Check that the stationary distribution is correct.
     equilibrium_rates = np.dot(root_distn, unnormalized_Q)
