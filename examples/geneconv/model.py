@@ -125,9 +125,10 @@ def get_Q_and_distn(nt_pairs, phi):
     pre_Q = get_pre_Q(nt_pairs, phi)
     unnormalized_Q = pre_Q - np.diag(pre_Q.sum(axis=1))
 
-    # Compute the stationary distribution.
-    #root_distn = get_distn_clever(phi, nt_pairs)
-    root_distn = get_distn_brute(unnormalized_Q)
+    # Compute the stationary distribution in a couple of ways.
+    root_distn = get_distn_clever(phi, nt_pairs)
+    root_distn_brute = get_distn_brute(unnormalized_Q)
+    assert_allclose(root_distn, root_distn_brute)
 
     # Check that the stationary distribution is correct.
     equilibrium_rates = np.dot(root_distn, unnormalized_Q)
