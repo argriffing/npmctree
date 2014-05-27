@@ -4,6 +4,7 @@ Functions related to histories on trees.
 Every node in a Markov chain tree history has a known state.
 
 """
+from __future__ import division, print_function, absolute_import
 
 import itertools
 

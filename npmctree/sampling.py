@@ -35,7 +35,7 @@ def sample_history(T, edge_to_P, root,
 def sample_histories(T, edge_to_P, root,
         root_prior_distn1d, node_to_data_lmap, nhistories):
     """
-    Sample multiple history.
+    Sample multiple histories.
     Each history is a joint sample of states on the tree.
 
     """
