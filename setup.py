@@ -9,6 +9,8 @@ DOCLINES = __doc__.split('\n')
 # http://docs.python.org/2/distutils/setupscript.html
 #
 # It is meant to be installed through github using pip.
+#
+# More stuff added for Cython extensions.
 
 from distutils.core import setup
 
@@ -22,6 +24,7 @@ setup(
         packages=['npmctree'],
         test_suite='nose.collector',
         package_data={'npmctree' : ['tests/test_*.py']},
+        cmdclass={'build_ext' : build_ext},
+        ext_modules=[Extension('npmctree.cyfels', ['npmctree/cyfels.pyx'])],
         )
-
 
