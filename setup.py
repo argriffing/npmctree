@@ -14,6 +14,10 @@ DOCLINES = __doc__.split('\n')
 
 from distutils.core import setup
 
+from distutils.extension import Extension
+
+from Cython.Distutils import build_ext
+
 setup(
         name='npmctree',
         version='0.1',

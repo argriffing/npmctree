@@ -80,6 +80,8 @@ def esd_site_first_pass(
         This array is for output only.
 
     """
+    return 0
+    """
     cdef int nnodes = state_mask.shape[0]
     cdef int nstates = state_mask.shape[1]
     cdef int node_ind_start, node_ind_stop
@@ -112,4 +114,5 @@ def esd_site_first_pass(
             subtree_probability[na, sa] = multiplicative_prob
 
     return 0
+    """
 
