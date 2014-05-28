@@ -17,6 +17,7 @@ the end user will need to have Cython.
 from cython.view cimport array as cvarray
 
 import numpy as np
+from numpy.testing import assert_equal
 cimport numpy as cnp
 cimport cython
 from libc.math cimport log, exp, sqrt
@@ -80,10 +81,20 @@ def esd_site_first_pass(
         This array is for output only.
 
     """
-    return 0
+    # Get the number of nodes and the number of states.
+    cdef int nnodes = data.shape[0]
+    cdef int nstates = data.shape[1]
+
     """
-    cdef int nnodes = state_mask.shape[0]
-    cdef int nstates = state_mask.shape[1]
+    # Check the conformability of the inputs.
+    # Note that the global interpreter lock (gil) should be in effect
+    # for this section.
+    assert_equal(trans.shape, (nnodes-1, nstates, nstates))
+    assert_equal(lhood.shape, (nnodes, nstates))
+    assert_equal(csr_indices.shape, (nnodes-1,))
+    assert_equal(csr_indptr.shape, ())
+
+
     cdef int node_ind_start, node_ind_stop
     cdef double multiplicative_prob
     cdef double additive_prob
@@ -112,7 +123,7 @@ def esd_site_first_pass(
                                 subtree_probability[nb, sb])
                 multiplicative_prob *= additive_prob
             subtree_probability[na, sa] = multiplicative_prob
+    """
 
     return 0
-    """
 
