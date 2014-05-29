@@ -113,7 +113,7 @@ def esd_site_first_pass(
         cnp.float_t[:, :, :] trans, # (nnodes-1, nstates, nstates)
         cnp.float_t[:, :] data, # (nnodes, nstates)
         cnp.float_t[:, :] lhood, # (nnodes, nstates)
-        int check_csr=1,
+        int validation=1,
         ):
     """
     Compute partial likelihoods for single site.
@@ -147,8 +147,10 @@ def esd_site_first_pass(
     lhood : ndarray view
         For each node, the partial likelihood for each state.
         This array is for output only.
-    check_csr : int
-        Indicates whether to check the csr representation of the tree.
+    validation : int
+        Indicates whether to check the input formats.
+        This would include checking the csr representation of the tree and
+        the dimensions of the inputs.
 
     """
     # Get the number of nodes and the number of states.
@@ -158,9 +160,9 @@ def esd_site_first_pass(
     # Check the conformability of the inputs.
     # Note that the global interpreter lock (gil) should be in effect
     # for this section.
-    assert_shape_equal(trans, (nnodes-1, nstates, nstates))
-    assert_shape_equal(lhood, (nnodes, nstates))
-    if check_csr:
+    if validation:
+        assert_shape_equal(trans, (nnodes-1, nstates, nstates))
+        assert_shape_equal(lhood, (nnodes, nstates))
         assert_csr_tree(csr_indices, csr_indptr, nnodes)
 
     # Declare some variables for iterating over edges.
