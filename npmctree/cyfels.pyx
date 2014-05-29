@@ -17,7 +17,7 @@ the end user will need to have Cython.
 from cython.view cimport array as cvarray
 
 import numpy as np
-from numpy.testing import assert_equal
+from numpy.testing import assert_equal, assert_array_equal, assert_array_less
 cimport numpy as cnp
 cimport cython
 from libc.math cimport log, exp, sqrt
@@ -34,13 +34,25 @@ ctypedef fused idx_t:
     cnp.int64_t
 
 
-__all__ = ['assert_tree_csr', 'esd_site_first_pass']
+__all__ = ['assert_csr_tree', 'esd_site_first_pass']
 
 
-def assert_tree_csr(
+def assert_shape_equal(arr, desired_shape):
+    # Work around Cython problems.
+    # http://trac.cython.org/cython_trac/ticket/780
+    n = arr.ndim
+    assert_equal(n, len(desired_shape))
+    for i in range(n):
+        assert_equal(arr.shape[i], desired_shape[i])
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+def assert_csr_tree(
         idx_t[:] csr_indices,
         idx_t[:] csr_indptr,
-        cnp.int_t nnodes,
+        int nnodes,
         ):
     """
     Assume the node indices are 0..(nnodes-1) and are in toposort preorder.
@@ -54,8 +66,8 @@ def assert_tree_csr(
     # Check the conformability of the inputs.
     # Note that the global interpreter lock (gil) should be in effect
     # for this section.
-    assert_equal(csr_indices.shape, (nnodes-1,))
-    assert_equal(csr_indptr.shape, (nnodes+1,))
+    assert_shape_equal(csr_indices, (nnodes-1,))
+    assert_shape_equal(csr_indptr, (nnodes+1,))
 
     # Check that each indptr element is either a valid index
     # into the indices array or is equal to the length of the indices array.
@@ -68,25 +80,28 @@ def assert_tree_csr(
     cdef int j
     cdef idx_t indstart, indstop
     cdef idx_t na, nb
-    cdef cnp.int_t visited[:] = cnp.zeros(nnodes, dtype=cnp.int_t)
-    cdef cnp.int_t head[:] = cnp.zeros(nnodes, dtype=cnp.int_t)
-    cdef cnp.int_t tail[:] = cnp.zeros(nnodes, dtype=cnp.int_t)
-    visited[0] = 1
-    for na in range(nnodes):
-        head[na] = visited[na]
-        indstart = csr_indptr[na]
-        indstop = csr_indptr[na+1]
-        for j in range(indstart, indstop):
-            nb = csr_indices[j]
-            tail[nb] = visited[nb]
-            visited[nb] += 1
+    cdef cnp.int_t[:] visited = np.zeros(nnodes, dtype=int)
+    cdef cnp.int_t[:] head = np.zeros(nnodes, dtype=int)
+    cdef cnp.int_t[:] tail = np.zeros(nnodes, dtype=int)
+    with nogil:
+        visited[0] = 1
+        for na in range(nnodes):
+            head[na] = visited[na]
+            indstart = csr_indptr[na]
+            indstop = csr_indptr[na+1]
+            for j in range(indstart, indstop):
+                nb = csr_indices[j]
+                tail[nb] = visited[nb]
+                visited[nb] += 1
 
     # Check that each node had been visited exactly once.
+    assert_array_equal(visited, 1)
+
     # Check that each head node had been visited exactly once.
+    assert_array_equal(head, 1)
+
     # Check that each tail node had not been visited.
-    assert_equal(visited, 1)
-    assert_equal(head, 1)
-    assert_equal(tail, 0)
+    assert_array_equal(tail, 0)
 
 
 @cython.boundscheck(False)
@@ -98,7 +113,7 @@ def esd_site_first_pass(
         cnp.float_t[:, :, :] trans, # (nnodes-1, nstates, nstates)
         cnp.float_t[:, :] data, # (nnodes, nstates)
         cnp.float_t[:, :] lhood, # (nnodes, nstates)
-        cnp.int_t check_csr=1,
+        int check_csr=1,
         ):
     """
     Compute partial likelihoods for single site.
@@ -132,6 +147,8 @@ def esd_site_first_pass(
     lhood : ndarray view
         For each node, the partial likelihood for each state.
         This array is for output only.
+    check_csr : int
+        Indicates whether to check the csr representation of the tree.
 
     """
     # Get the number of nodes and the number of states.
@@ -141,16 +158,17 @@ def esd_site_first_pass(
     # Check the conformability of the inputs.
     # Note that the global interpreter lock (gil) should be in effect
     # for this section.
-    assert_equal(csr_indices.shape, (nnodes-1,))
-    assert_equal(csr_indptr.shape, (nnodes+1,))
-    assert_equal(trans.shape, (nnodes-1, nstates, nstates))
-    assert_equal(lhood.shape, (nnodes, nstates))
+    assert_shape_equal(trans, (nnodes-1, nstates, nstates))
+    assert_shape_equal(lhood, (nnodes, nstates))
+    if check_csr:
+        assert_csr_tree(csr_indices, csr_indptr, nnodes)
 
     # Check that each indptr element is either a valid index
     # into the indices array or is equal to the length of the indices array.
 
     # Avoid the interpreter lock.
     with nogil:
+        """
         cdef int node_ind_start, node_ind_stop
         cdef double multiplicative_prob
         cdef double additive_prob
@@ -179,6 +197,8 @@ def esd_site_first_pass(
                                     subtree_probability[nb, sb])
                     multiplicative_prob *= additive_prob
                 subtree_probability[na, sa] = multiplicative_prob
+        """
+        pass
 
     return 0
 
