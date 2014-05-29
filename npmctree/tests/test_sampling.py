@@ -135,7 +135,7 @@ def test_sampling_slow():
 
 
 def test_sampling_fast():
-    sqrt_nsamples = 50
+    sqrt_nsamples = 10
     _sampling_helper(sqrt_nsamples)
 
 
