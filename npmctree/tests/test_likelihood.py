@@ -14,12 +14,12 @@ from numpy.testing import (run_module_suite, TestCase,
 import npmctree
 from npmctree import dynamic_fset_lhood, brute_fset_lhood
 from npmctree import dynamic_lmap_lhood, brute_lmap_lhood
+from npmctree import cy_dynamic_lmap_lhood
 
 
 def test_dynamic_history_likelihood():
     # In this test the history is completely specified.
 
-    #TODO change tree states 0, 1, 2, 3 to 'a', 'b', 'c', 'd'
     G = nx.Graph()
     G.add_edge('a', 'b')
     G.add_edge('a', 'c')
@@ -80,6 +80,11 @@ def test_dynamic_history_likelihood():
 
     # Compare to dynamic lmap likelihood.
     actual_likelihood = dynamic_lmap_lhood.get_lhood(T, edge_to_P, root,
+            root_prior_distn1d, node_to_data_lmap)
+    assert_allclose(actual_likelihood, desired_lmap_likelihood)
+
+    # Compare to cythonized dynamic lmap likelihood.
+    actual_likelihood = cy_dynamic_lmap_lhood.get_lhood(T, edge_to_P, root,
             root_prior_distn1d, node_to_data_lmap)
     assert_allclose(actual_likelihood, desired_lmap_likelihood)
 

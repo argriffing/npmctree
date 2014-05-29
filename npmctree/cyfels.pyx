@@ -163,42 +163,44 @@ def esd_site_first_pass(
     if check_csr:
         assert_csr_tree(csr_indices, csr_indptr, nnodes)
 
-    # Check that each indptr element is either a valid index
-    # into the indices array or is equal to the length of the indices array.
+    # Declare some variables for iterating over edges.
+    cdef int i, j
+    cdef idx_t indstart, indstop
+    cdef idx_t na, nb, edge_idx
+    cdef int sa, sb
+    cdef cnp.float64_t multiplicative_prob, additive_prob
 
-    # Avoid the interpreter lock.
     with nogil:
-        """
-        cdef int node_ind_start, node_ind_stop
-        cdef double multiplicative_prob
-        cdef double additive_prob
-        cdef int na, nb
-        cdef int i, j
+        # Initialize the likelhood array with zeros.
         for i in range(nnodes):
+            for j in range(nstates):
+                lhood[i, j] = 0
 
-            # Define the current node.
+        # Fill the partial likelihood array for each subtree.
+        for i in range(nnodes):
             na = (nnodes - 1) - i
-            node_ind_start = tree_csr_indptr[na]
-            node_ind_stop = tree_csr_indptr[na+1]
+            indstart = csr_indptr[na]
+            indstop = csr_indptr[na+1]
 
-            # Compute the subtree probability for each possible state.
+            # Compute the subtree likelihood for each possible state.
             for sa in range(nstates):
-                subtree_probability[na, sa] = 0
-                if not state_mask[na, sa]:
-                    continue
-                multiplicative_prob = 1
-                for j in range(node_ind_start, node_ind_stop):
-                    nb = tree_csr_indices[j]
+                multiplicative_prob = data[na, sa]
+                for j in range(indstart, indstop):
+
+                    # Compute the tail node index and the edge index.
+                    nb = csr_indices[j]
+                    eidx = nb - 1
+
+                    # Compute the additive probability for the edge.
                     additive_prob = 0 
                     for sb in range(nstates):
-                        if state_mask[nb, sb]:
-                            additive_prob += (
-                                    esd_transitions[nb, sa, sb] *
-                                    subtree_probability[nb, sb])
+                        additive_prob += trans[eidx, sa, sb] * lhood[nb, sb]
+
+                    # Contribute the probability associated with the edge.
                     multiplicative_prob *= additive_prob
-                subtree_probability[na, sa] = multiplicative_prob
-        """
-        pass
+
+                # The subtree probability is a product.
+                lhood[na, sa] = multiplicative_prob
 
     return 0
 
