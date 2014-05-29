@@ -34,7 +34,59 @@ ctypedef fused idx_t:
     cnp.int64_t
 
 
-__all__ = ['esd_site_first_pass']
+__all__ = ['assert_tree_csr', 'esd_site_first_pass']
+
+
+def assert_tree_csr(
+        idx_t[:] csr_indices,
+        idx_t[:] csr_indptr,
+        cnp.int_t nnodes,
+        ):
+    """
+    Assume the node indices are 0..(nnodes-1) and are in toposort preorder.
+
+    """
+    # Require at least one node.
+    # For example networkx raises an exception if you try to build
+    # a csr matrix from a graph without nodes.
+    assert_array_less(0, nnodes)
+
+    # Check the conformability of the inputs.
+    # Note that the global interpreter lock (gil) should be in effect
+    # for this section.
+    assert_equal(csr_indices.shape, (nnodes-1,))
+    assert_equal(csr_indptr.shape, (nnodes+1,))
+
+    # Check that each indptr element is either a valid index
+    # into the indices array or is equal to the length of the indices array.
+    assert_array_less(-1, csr_indptr)
+    assert_array_less(csr_indptr, nnodes+1)
+    assert_array_less(-1, csr_indices)
+    assert_array_less(csr_indices, nnodes)
+
+    # Check preorder.
+    cdef int j
+    cdef idx_t indstart, indstop
+    cdef idx_t na, nb
+    cdef cnp.int_t visited[:] = cnp.zeros(nnodes, dtype=cnp.int_t)
+    cdef cnp.int_t head[:] = cnp.zeros(nnodes, dtype=cnp.int_t)
+    cdef cnp.int_t tail[:] = cnp.zeros(nnodes, dtype=cnp.int_t)
+    visited[0] = 1
+    for na in range(nnodes):
+        head[na] = visited[na]
+        indstart = csr_indptr[na]
+        indstop = csr_indptr[na+1]
+        for j in range(indstart, indstop):
+            nb = csr_indices[j]
+            tail[nb] = visited[nb]
+            visited[nb] += 1
+
+    # Check that each node had been visited exactly once.
+    # Check that each head node had been visited exactly once.
+    # Check that each tail node had not been visited.
+    assert_equal(visited, 1)
+    assert_equal(head, 1)
+    assert_equal(tail, 0)
 
 
 @cython.boundscheck(False)
@@ -46,6 +98,7 @@ def esd_site_first_pass(
         cnp.float_t[:, :, :] trans, # (nnodes-1, nstates, nstates)
         cnp.float_t[:, :] data, # (nnodes, nstates)
         cnp.float_t[:, :] lhood, # (nnodes, nstates)
+        cnp.int_t check_csr=1,
         ):
     """
     Compute partial likelihoods for single site.
@@ -85,45 +138,47 @@ def esd_site_first_pass(
     cdef int nnodes = data.shape[0]
     cdef int nstates = data.shape[1]
 
-    """
     # Check the conformability of the inputs.
     # Note that the global interpreter lock (gil) should be in effect
     # for this section.
+    assert_equal(csr_indices.shape, (nnodes-1,))
+    assert_equal(csr_indptr.shape, (nnodes+1,))
     assert_equal(trans.shape, (nnodes-1, nstates, nstates))
     assert_equal(lhood.shape, (nnodes, nstates))
-    assert_equal(csr_indices.shape, (nnodes-1,))
-    assert_equal(csr_indptr.shape, ())
 
+    # Check that each indptr element is either a valid index
+    # into the indices array or is equal to the length of the indices array.
 
-    cdef int node_ind_start, node_ind_stop
-    cdef double multiplicative_prob
-    cdef double additive_prob
-    cdef int na, nb
-    cdef int i, j
-    for i in range(nnodes):
+    # Avoid the interpreter lock.
+    with nogil:
+        cdef int node_ind_start, node_ind_stop
+        cdef double multiplicative_prob
+        cdef double additive_prob
+        cdef int na, nb
+        cdef int i, j
+        for i in range(nnodes):
 
-        # Define the current node.
-        na = (nnodes - 1) - i
-        node_ind_start = tree_csr_indptr[na]
-        node_ind_stop = tree_csr_indptr[na+1]
+            # Define the current node.
+            na = (nnodes - 1) - i
+            node_ind_start = tree_csr_indptr[na]
+            node_ind_stop = tree_csr_indptr[na+1]
 
-        # Compute the subtree probability for each possible state.
-        for sa in range(nstates):
-            subtree_probability[na, sa] = 0
-            if not state_mask[na, sa]:
-                continue
-            multiplicative_prob = 1
-            for j in range(node_ind_start, node_ind_stop):
-                nb = tree_csr_indices[j]
-                additive_prob = 0 
-                for sb in range(nstates):
-                    if state_mask[nb, sb]:
-                        additive_prob += (
-                                esd_transitions[nb, sa, sb] *
-                                subtree_probability[nb, sb])
-                multiplicative_prob *= additive_prob
-            subtree_probability[na, sa] = multiplicative_prob
-    """
+            # Compute the subtree probability for each possible state.
+            for sa in range(nstates):
+                subtree_probability[na, sa] = 0
+                if not state_mask[na, sa]:
+                    continue
+                multiplicative_prob = 1
+                for j in range(node_ind_start, node_ind_stop):
+                    nb = tree_csr_indices[j]
+                    additive_prob = 0 
+                    for sb in range(nstates):
+                        if state_mask[nb, sb]:
+                            additive_prob += (
+                                    esd_transitions[nb, sa, sb] *
+                                    subtree_probability[nb, sb])
+                    multiplicative_prob *= additive_prob
+                subtree_probability[na, sa] = multiplicative_prob
 
     return 0
 
