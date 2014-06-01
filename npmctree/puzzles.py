@@ -65,6 +65,7 @@ def sample_distn1d(nstates, pzero):
 
 def sample_lmap(nstates, pzero):
     """
+
     Parameters
     ----------
     nstates : int
@@ -95,7 +96,7 @@ def sample_data_fvec1ds(nodes, nstates, pzero):
 
 def sample_data_lmaps(nodes, nstates, pzero):
     """
-    Return a map from node to feasible state set.
+    Return a map from node to observed data likelihood per state.
 
     Parameters
     ----------

@@ -19,7 +19,7 @@ from .util import ddec, make_distn1d
 from .dynamic_fset_lhood import (
         _get_partial_likelihood, _forward_edges, _forward)
 from ._generic_lmap_lhood import params, validated_params
-from .cyfels import esd_site_first_pass
+from .cyfels import esd_first_pass
 
 __all__ = [
         'get_lhood',
@@ -113,7 +113,7 @@ def _get_root_lhoods(T, edge_to_P, root,
 
 
 def _wrapped_first_pass(*args):
-    return esd_site_first_pass(*args)
+    return esd_first_pass(*args)
 
 
 @ddec(params=params)

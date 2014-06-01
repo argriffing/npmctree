@@ -4,12 +4,15 @@ Required dependencies:
  * [Python 2.7+](http://www.python.org/)
  * [pip](https://pip.readthedocs.org/) (installation)
  * [git](http://git-scm.com/) (installation)
- * [NetworkX](http:/networkx.lanl.gov/) (graph data types and algorithms)
+ * [NetworkX](http://networkx.lanl.gov/) (graph data types and algorithms)
    - `$ pip install --user git+https://github.com/networkx/networkx`
- * [numpy](http://www.numpy.org/)
+ * [Cython](http://cython.org) (manually write unsafe fast code for Python)
+   - `$ pip install --user git+https://github.com/cython/cython`
+ * [numpy](http://www.numpy.org/) (arrays)
 
 Optional dependencies:
- * [nose](https://nose.readthedocs.org/) (testing)
+ * [nose](http://readthedocs.org/docs/nose/en/latest/) (testing)
+   - `$ pip install --user git+https://github.com/nose-devs/nose`
  * [coverage](http://nedbatchelder.com/code/coverage/) (test coverage)
    - `$ apt-get install python-coverage`
 
