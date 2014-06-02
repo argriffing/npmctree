@@ -146,7 +146,7 @@ def get_log_likelihood(T, root, data, edges,
     # Compute the equilibrium distribution.
     # Note that this distribution is invariant to the scale of the rate matrix.
     root_distn = get_distn_brute(R)
-    print('root distn:', root_distn)
+    #print('root distn:', root_distn)
 
     # Compute the transition probability matrix for each edge.
     edge_to_P = {}
@@ -158,13 +158,14 @@ def get_log_likelihood(T, root, data, edges,
         edge_to_P[edge] = P
 
     # Get the likelihood at each site.
-    #lhoods = get_iid_lhoods(T, edge_to_P, root, root_distn, data)
-    lhoods = []
-    for d in data:
-        lhood = get_lhood(T, edge_to_P, root, root_distn, d)
-        lhoods.append(lhood)
+    lhoods = get_iid_lhoods(T, edge_to_P, root, root_distn, data)
+    #lhoods = []
+    #for d in data:
+        #lhood = get_lhood(T, edge_to_P, root, root_distn, d)
+        #lhoods.append(lhood)
 
     # Return the log likelihood.
+    """
     print('search info parameters...')
     print('kappa:', kappa)
     print('nt probs:', nt_probs)
@@ -173,6 +174,7 @@ def get_log_likelihood(T, root, data, edges,
     print('search info likelihoods...')
     print('lhoods:', lhoods)
     print()
+    """
     return np.log(lhoods).sum()
 
 
@@ -203,6 +205,7 @@ def objective(T, root, data, edges, log_params):
             kappa, nt_probs, tau, edge_rates)
 
     # return the penalized negative log likelihood
+    #print(ll, nt_penalty)
     return -ll + nt_penalty
 
 
@@ -258,15 +261,29 @@ def main():
     # Use a black box search.
     res = scipy.optimize.minimize(f, logx0, method='L-BFGS-B')
 
+    # Report the raw search output.
+    print('raw search output:')
+    print(res)
+    print()
+
     # Transform the results of the search.
     logxopt = res.x
     xopt = np.exp(logxopt)
 
-    # Report the raw search output.
-    print(res)
-
-    # Report the transformed parameter estimates.
-    print(xopt)
+    # Unpack.
+    kappa = xopt[0]
+    nt_weights = xopt[1:5]
+    tau = xopt[5]
+    edge_rates = xopt[6:]
+    nt_probs = nt_weights / nt_weights.sum()
+    print('max likelihood parameter estimates...')
+    print('kappa:', kappa)
+    print('nt probs:', nt_probs)
+    print('tau:', tau)
+    print('edge rates:')
+    for i, edge in enumerate(edges):
+        print('edge:', edge, 'rate:', edge_rates[i])
+    print()
 
 
 if __name__ == '__main__':
