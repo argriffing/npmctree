@@ -111,6 +111,26 @@ def sample_data_lmaps(nodes, nstates, pzero):
     return dict((v, sample_lmap(nstates, pzero)) for v in nodes)
 
 
+def sample_iid_data_lmaps(nodes, nstates, pzero, nsamples=4):
+    """
+    Yield maps from node to observed data likelihood per state.
+
+    Parameters
+    ----------
+    nodes : set
+        nodes
+    nstates : int
+        number of states
+    pzero : float
+        probability that any given state is infeasible
+
+    """
+    iid_samples = []
+    for i in range(nsamples):
+        iid_samples.append(sample_data_lmaps(nodes, nstates, pzero))
+    return iid_samples
+
+
 def _sample_single_node_system(pzero, fn_sample_data):
     T = nx.DiGraph()
     root = 'a'
@@ -187,6 +207,17 @@ def gen_random_lmap_systems(pzero, nsystems=40):
 
     """
     for x in _gen_random_systems(pzero, sample_data_lmaps, nsystems):
+        yield x
+
+
+def gen_random_iid_lmap_systems(pzero, nsystems=40):
+    """
+    Sample whole systems for testing likelihood.
+    The pzero parameter indicates sparsity.
+    Yield (T, edge_to_P, root, root_prior_distn, node_to_data_lmap).
+
+    """
+    for x in _gen_random_systems(pzero, sample_iid_data_lmaps, nsystems):
         yield x
 
 
