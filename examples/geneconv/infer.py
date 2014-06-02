@@ -14,6 +14,7 @@ import scipy.linalg
 
 import npmctree
 from npmctree.dynamic_fset_lhood import get_lhood
+from npmctree.dynamic_lmap_lhood import get_iid_lhoods
 
 from model import get_state_space, get_tree_info, get_pre_Q, get_Q_and_distn
 from util import json_to_seqdata
@@ -107,10 +108,8 @@ def objective(T, root, edge_to_blen, nt_pairs, constraints, params):
         edge_to_P[edge] = P
 
     # sum the negative log likelihoods over each site in the alignment
-    neg_ll = 0
-    for node_to_data_fvec1d in constraints:
-        lhood = get_lhood(T, edge_to_P, root, root_distn, node_to_data_fvec1d)
-        neg_ll -= np.log(lhood)
+    lhoods = get_iid_lhoods(T, edge_to_P, root, root_distn, constraints)
+    neg_ll = -np.log(lhoods).sum()
 
     # return negative log likelihood
     return neg_ll
