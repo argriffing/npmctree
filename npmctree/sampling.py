@@ -10,11 +10,13 @@ import numpy as np
 import networkx as nx
 
 from npmctree import dynamic_fset_lhood, dynamic_lmap_lhood
-from .util import normalized
+from .util import normalized, weighted_choice
 
 __all__ = [
         'sample_history',
         'sample_histories',
+        'sample_unconditional_history',
+        'sample_unconditional_histories',
         ]
 
 
@@ -60,7 +62,7 @@ def _sample_states_preprocessed(T, edge_to_P, root,
     if not root_partial_likelihoods.any():
         return None
     distn1d = normalized(root_partial_likelihoods)
-    root_state = np.random.choice(range(n), p=distn1d)
+    root_state = weighted_choice(n, p=distn1d)
     v_to_sampled_state = {root : root_state}
     for edge in nx.bfs_edges(T, root):
         va, vb = edge
@@ -75,7 +77,36 @@ def _sample_states_preprocessed(T, edge_to_P, root,
 
         # Sample the state.
         distn1d = normalized(sb_weights)
-        v_to_sampled_state[vb] = np.random.choice(range(n), p=distn1d)
+        v_to_sampled_state[vb] = weighted_choice(n, p=distn1d)
 
     return v_to_sampled_state
+
+
+def sample_unconditional_history(T, edge_to_P, root, root_prior_distn1d):
+    """
+    No data is used in the sampling of this state history at nodes.
+
+    """
+    nstates = root_prior_distn1d.shape[0]
+    node_to_state = {root : weighted_choice(nstates, p=root_prior_distn1d)}
+    for edge in nx.bfs_edges(T, root):
+        va, vb = edge
+        P = edge_to_P[edge]
+        sa = node_to_state[va]
+        node_to_state[vb] = weighted_choice(nstates, p=P[sa])
+    return node_to_state
+
+
+def sample_unconditional_histories(T, edge_to_P, root,
+        root_prior_distn1d, nhistories):
+    """
+    Sample multiple unconditional histories.
+
+    This function is not as useful as its conditional sampling analog,
+    because this function does not require pre-processing.
+
+    """
+    for i in range(nhistories):
+        yield sample_unconditional_history(
+            T, edge_to_P, root, root_prior_distn1d)
 

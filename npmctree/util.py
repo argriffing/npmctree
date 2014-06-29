@@ -9,6 +9,11 @@ import operator
 import numpy as np
 
 
+def weighted_choice(n, p=None):
+    #TODO older versions of numpy do not have the p keyword
+    return np.random.choice(range(n), p=p)
+
+
 def isboolobj(x):
     return x.dtype == np.bool
 
@@ -50,3 +55,4 @@ def ddec(**kwargs):
         obj.__doc__ = obj.__doc__.format(**kwargs)
         return obj
     return dec
+
