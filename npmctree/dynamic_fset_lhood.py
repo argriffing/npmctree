@@ -23,7 +23,72 @@ __all__ = [
         'get_lhood',
         'get_node_to_distn1d',
         'get_edge_to_distn2d',
+        'get_unconditional_joint_distn',
         ]
+
+
+def get_unconditional_joint_distn(
+        T, edge_to_P, root, root_prior_distn1d, selected_nodes):
+    """
+    Get the unconditional joint state distribution for a given set of nodes.
+
+    Parameters
+    ----------
+    T : directed networkx tree graph
+        Edge and node annotations are ignored.
+    edge_to_P : dict
+        A map from directed edges of the tree graph
+        to 2d float ndarrays representing state transition probabilities.
+    root : hashable
+        This is the root node.
+        Following networkx convention, this may be anything hashable.
+    root_prior_distn1d : dict
+        Prior state distribution at the root.
+    selected_nodes : a collection consisting of a subset of nodes in T
+        A collection of nodes to include in the distribution.
+
+    Returns
+    -------
+    node_to_data_fvec1d_prob_pairs : sequence
+        A sequence of (node_to_data_fvec1d, probability) pairs.
+        The first element of each sequence maps each node
+        to a 1d feasibility vector.
+
+    """
+    selected_nodes = list(selected_nodes)
+    unselected_nodes = set(T) - set(selected_nodes)
+    nselected = len(selected_nodes)
+    nstates = root_prior_distn1d.shape[0]
+    states = range(nstates)
+
+    # Compute the state distribution at the nodes,
+    # under the given parameter values.
+    pairs = []
+    for assignment in itertools.product(states, repeat=nselected):
+
+        # Get the map from leaf to state.
+        leaf_to_state = dict(zip(selected_nodes, assignment))
+
+        # Define the data associated with this assignment.
+        # All leaf states are fully observed.
+        # All internal states are completely unobserved.
+        node_to_data_fvec1d = {}
+        for node in selected_nodes:
+            state = leaf_to_state[node]
+            fvec1d = np.zeros(nstates, dtype=bool)
+            fvec1d[state] = True
+            node_to_data_fvec1d[node] = fvec1d
+        for node in unselected_nodes:
+            fvec1d = np.ones(nstates, dtype=bool)
+            node_to_data_fvec1d[node] = fvec1d
+
+        # Compute the likelihood for this data.
+        lhood = get_lhood(
+                T, edge_to_P, root, root_prior_distn1d, node_to_data_fvec1d)
+        pairs.append((node_to_data_fvec1d, lhood))
+
+    # Return the observations weighted by probability.
+    return pairs
 
 
 @ddec(params=params)
