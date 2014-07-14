@@ -87,6 +87,12 @@ def get_unconditional_joint_distn(
                 T, edge_to_P, root, root_prior_distn1d, node_to_data_fvec1d)
         pairs.append((node_to_data_fvec1d, lhood))
 
+    # Check that the likelihoods sum to 1.
+    lhood_sum = sum(p for d, p in pairs)
+    if not np.allclose(lhood_sum, 1):
+        raise Exception('probabilities of a finite distribution '
+                'sum to %s' % lhood_sum)
+
     # Return the observations weighted by probability.
     return pairs
 
