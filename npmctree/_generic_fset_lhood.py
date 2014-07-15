@@ -26,13 +26,18 @@ params = """\
 
 
 @ddec(params=params)
-def validated_params(T, edge_to_A, root,
+def validated_params(T, edge_to_P, root,
         root_prior_distn1d, node_to_data_fvec1d):
     """
+
+    Parameters
+    ----------
+    {params}
+
     """
     if not all(isboolobj(d) for d in node_to_data_fvec1d.values()):
         warn('converting data arrays to bool')
         node_to_data_fvec1d = dict(
                 (v, d.astype(bool)) for v, d in node_to_data_fvec1d.items())
 
-    return T, edge_to_A, root, root_prior_distn1d, node_to_data_fvec1d
+    return T, edge_to_P, root, root_prior_distn1d, node_to_data_fvec1d

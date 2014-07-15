@@ -2,6 +2,7 @@
 Functions related to histories on trees.
 
 Every node in a Markov chain tree history has a known state.
+These functions are mostly for testing.
 
 """
 from __future__ import division, print_function, absolute_import
@@ -15,6 +16,7 @@ __all__ = [
         'get_history_lhood',
         'get_history_feas',
         'gen_plausible_histories',
+        'gen_plausible_histories_from_xmap',
         ]
 
 
@@ -78,3 +80,36 @@ def gen_plausible_histories(node_to_data_fvec1d):
         node_to_state = dict(zip(nodes, assignment))
         yield node_to_state
 
+
+def gen_plausible_histories_from_xmap(all_nodes, nstates, xmap):
+    """
+    Yield histories compatible with directly observed data.
+
+    Each history is a map from node to state.
+    Some of these histories may have zero probability when the
+    shape of the tree and the structure of the transition matrices
+    is taken into account.
+
+    Parameters
+    ----------
+    all_nodes : collection of nodes
+        The collection of all nodes in the tree.
+        Nodes present in this collection but missing from the xmap
+        are assumed to have completely unknown state.
+    nstates : integer
+        Size of the state space.
+        In this npmctree package the state space is considered
+        fixed across all nodes and branches in the tree.
+    xmap : dict
+        Map from some nodes to their known states.
+        Nodes either have completely known or completely unknown state.
+        Nodes with completely known state are in the xmap,
+        and nodes with completely unknown state are missing from the xmap.
+
+    """
+    hidden_nodes = list(set(all_nodes) - set(xmap))
+    nhidden = len(hidden_nodes)
+    for assignment in itertools.product(range(nstates), repeat=nhidden):
+        h = dict(zip(hidden_nodes, assignment))
+        h.update(xmap)
+        yield h

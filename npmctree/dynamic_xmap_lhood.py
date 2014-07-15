@@ -14,7 +14,7 @@ import networkx as nx
 from .util import ddec, make_distn1d
 from .dynamic_fset_lhood import (
         _get_partial_likelihood, _forward_edges, _forward)
-from ._generic_lmap_lhood import params, validated_params
+from ._generic_xmap_lhood import params, validated_params
 from .cyfels import iid_likelihoods
 
 __all__ = [
@@ -25,7 +25,7 @@ __all__ = [
         ]
 
 
-def get_iid_lhoods(T, edge_to_P, root, root_prior_distn1d, node_to_data_lmaps):
+def get_iid_lhoods(T, edge_to_P, root, root_prior_distn1d, xmaps):
     """
     Get the likelihood of this combination of parameters.
 
@@ -41,11 +41,10 @@ def get_iid_lhoods(T, edge_to_P, root, root_prior_distn1d, node_to_data_lmaps):
         Following networkx convention, this may be anything hashable.
     root_prior_distn1d : 1d ndarray
         Prior state distribution at the root.
-    node_to_data_lmaps : sequence of dicts of 1d float ndarrays
-        Observed data.
-        For each iid site, a dict mapping each node to a 1d array
-        giving the observation likelihood for each state.
-        This parameter is similar to the sample_histories output.
+    xmaps : sequence of dicts
+        This is the observed data. Nodes not included in the dict
+        are assumed to have completely unobserved state.
+        Partial observations are not supported in this xmap-based module.
 
     Returns
     -------
@@ -53,7 +52,8 @@ def get_iid_lhoods(T, edge_to_P, root, root_prior_distn1d, node_to_data_lmaps):
         Likelihood for each iid site.
 
     """
-    nsites = len(node_to_data_lmaps)
+    nsites = len(xmaps)
+    nstates = root_prior_distn1d.shape[0]
 
     # Define a toposort node ordering and a corresponding csr matrix.
     nodes = nx.topological_sort(T, [root])
@@ -62,7 +62,6 @@ def get_iid_lhoods(T, edge_to_P, root, root_prior_distn1d, node_to_data_lmaps):
 
     # Stack the transition matrices into a single array.
     nnodes = len(nodes)
-    nstates = root_prior_distn1d.shape[0]
     trans = np.empty((nnodes-1, nstates, nstates), dtype=float)
     for (na, nb), P in edge_to_P.items():
         edge_idx = node_to_idx[nb] - 1
@@ -70,9 +69,14 @@ def get_iid_lhoods(T, edge_to_P, root, root_prior_distn1d, node_to_data_lmaps):
 
     # Stack the data into a single array.
     data = np.empty((nsites, nnodes, nstates), dtype=float)
-    for i, node_to_data_lmap in enumerate(node_to_data_lmaps):
+    for i, xmap in enumerate(xmaps):
         for j, na in enumerate(nodes):
-            data[i, j, :] = node_to_data_lmap[na]
+            state = xmap.get(na, None)
+            if state is None:
+                data[i, j, :] = 1
+            else:
+                data[i, j, :] = 0
+                data[i, j, state] = 1
 
     # Compute the likelihoods.
     lhoods = np.empty(nsites, dtype=float)
@@ -101,7 +105,7 @@ def get_lhood(*args):
 
     """
     args = validated_params(*args)
-    T, edge_to_P, root, root_prior_distn1d, node_to_data_lmap = args
+    T, edge_to_P, root, root_prior_distn1d, xmap = args
 
     root_lhoods = _get_root_lhoods(*args)
     if root_lhoods.any():
@@ -121,7 +125,7 @@ def get_node_to_distn1d(*args):
 
     """
     args = validated_params(*args)
-    T, edge_to_P, root, root_prior_distn1d, node_to_data_lmap = args
+    T, edge_to_P, root, root_prior_distn1d, xmap = args
 
     v_to_subtree_partial_likelihoods = _backward(*args)
     v_to_posterior_distn1d = _forward(T, edge_to_P, root,
@@ -140,7 +144,7 @@ def get_edge_to_distn2d(*args):
 
     """
     args = validated_params(*args)
-    T, edge_to_P, root, root_prior_distn1d, node_to_data_lmap = args
+    T, edge_to_P, root, root_prior_distn1d, xmap = args
 
     v_to_subtree_partial_likelihoods = _backward(*args)
     edge_to_J = _forward_edges(T, edge_to_P, root,
@@ -149,8 +153,7 @@ def get_edge_to_distn2d(*args):
 
 
 @ddec(params=params)
-def _get_root_lhoods(T, edge_to_P, root,
-        root_prior_distn1d, node_to_data_lmap):
+def _get_root_lhoods(T, edge_to_P, root, root_prior_distn1d, xmap):
     """
     Get the posterior likelihoods at the root, conditional on root state.
 
@@ -162,12 +165,12 @@ def _get_root_lhoods(T, edge_to_P, root,
 
     """
     v_to_subtree_partial_likelihoods = _backward(T, edge_to_P, root,
-            root_prior_distn1d, node_to_data_lmap)
+            root_prior_distn1d, xmap)
     return v_to_subtree_partial_likelihoods[root]
 
 
 @ddec(params=params)
-def _backward(T, edge_to_P, root, root_prior_distn1d, node_to_data_lmap):
+def _backward(T, edge_to_P, root, root_prior_distn1d, xmap):
     """
     This is the backward pass of a backward-forward algorithm.
 
@@ -179,7 +182,12 @@ def _backward(T, edge_to_P, root, root_prior_distn1d, node_to_data_lmap):
     n = root_prior_distn1d.shape[0]
     v_to_subtree_partial_likelihoods = {}
     for va in nx.topological_sort(T, [root], reverse=True):
-        lmap_data = node_to_data_lmap[va]
+        state = xmap.get(va, None)
+        if state is None:
+            lmap_data = np.ones(n, dtype=float)
+        else:
+            lmap_data = np.zeros(n, dtype=float)
+            lmap_data[state] = 1
         if T[va]:
             vbs = T[va]
         else:

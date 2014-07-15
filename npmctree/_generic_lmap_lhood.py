@@ -22,10 +22,15 @@ params = """\
 
 
 @ddec(params=params)
-def validated_params(T, edge_to_A, root,
+def validated_params(T, edge_to_P, root,
         root_prior_distn1d, node_to_data_lmap):
     """
     This function is not so interesting.
+
+    Parameters
+    ----------
+    {params}
+
     """
-    return T, edge_to_A, root, root_prior_distn1d, node_to_data_lmap
+    return T, edge_to_P, root, root_prior_distn1d, node_to_data_lmap
 

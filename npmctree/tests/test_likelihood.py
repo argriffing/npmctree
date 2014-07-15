@@ -13,6 +13,7 @@ from numpy.testing import (run_module_suite, TestCase,
 
 import npmctree
 from npmctree import dynamic_fset_lhood, brute_fset_lhood
+from npmctree import dynamic_xmap_lhood, brute_xmap_lhood
 from npmctree import dynamic_lmap_lhood, brute_lmap_lhood
 from npmctree import cy_dynamic_lmap_lhood
 
@@ -36,6 +37,9 @@ def test_dynamic_history_likelihood():
             'c' : np.array([1, 0, 0, 0], dtype=bool),
             'd' : np.array([1, 0, 0, 0], dtype=bool),
             }
+
+    # This xmap data has the same information as the fvec1d data.
+    xmap = dict((v, 0) for v in 'abcd')
 
     # The data completely restricts the set of states and includes likelihood.
     node_to_data_lmap = {
@@ -61,6 +65,7 @@ def test_dynamic_history_likelihood():
 
     # The likelihood is simple in this case.
     desired_fset_likelihood = (0.5 ** 4)
+    desired_xmap_likelihood = (0.5 ** 4)
     desired_lmap_likelihood = (0.5 ** 4) * (0.1 * 0.2 * 0.3 * 0.4)
 
     # Compare to brute fset likelihood.
@@ -72,6 +77,16 @@ def test_dynamic_history_likelihood():
     actual_likelihood = dynamic_fset_lhood.get_lhood(T, edge_to_P, root,
             root_prior_distn1d, node_to_data_fvec1d)
     assert_allclose(actual_likelihood, desired_fset_likelihood)
+
+    # Compare to brute xmap likelihood.
+    actual_likelihood = brute_xmap_lhood.get_lhood_brute(T, edge_to_P, root,
+            root_prior_distn1d, xmap)
+    assert_allclose(actual_likelihood, desired_xmap_likelihood)
+
+    # Compare to dynamic xmap likelihood.
+    actual_likelihood = dynamic_xmap_lhood.get_lhood(T, edge_to_P, root,
+            root_prior_distn1d, xmap)
+    assert_allclose(actual_likelihood, desired_xmap_likelihood)
 
     # Compare to brute lmap likelihood.
     actual_likelihood = brute_lmap_lhood.get_lhood_brute(T, edge_to_P, root,
