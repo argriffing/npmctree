@@ -11,11 +11,6 @@ the end user will need to have Cython.
 
 """
 
-#TODO what are the commands to check for full vs. partial Cythonization?
-
-#TODO check if this line can be removed
-from cython.view cimport array as cvarray
-
 import numpy as np
 from numpy.testing import assert_equal, assert_array_equal, assert_array_less
 cimport numpy as cnp
@@ -34,7 +29,7 @@ ctypedef fused idx_t:
     cnp.int64_t
 
 
-__all__ = ['assert_csr_tree', 'esd_site_first_pass']
+__all__ = ['assert_csr_tree', 'esd_site_first_pass', 'iid_likelihoods']
 
 
 def assert_shape_equal(arr, desired_shape):

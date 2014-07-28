@@ -14,8 +14,7 @@ from numpy.testing import (run_module_suite, assert_,
 import npmctree
 from npmctree.puzzles import (
         gen_random_fset_systems, gen_random_infeasible_fset_systems,
-        gen_random_lmap_systems, gen_random_infeasible_lmap_systems,
-        gen_random_iid_lmap_systems)
+        gen_random_lmap_systems, gen_random_infeasible_lmap_systems)
 from npmctree import brute_fset_feas, dynamic_fset_feas
 from npmctree import brute_fset_lhood, dynamic_fset_lhood
 from npmctree import brute_lmap_lhood, dynamic_lmap_lhood
@@ -288,17 +287,3 @@ def test_lmap_dynamic_vs_brute():
             assert_allclose(dynamic_fset[edge], brute_fset[edge])
             assert_allclose(dynamic_lmap[edge], brute_fset[edge])
             assert_allclose(brute_lmap[edge], brute_fset[edge])
-
-
-def test_get_iid_lhoods():
-    pzero = 0.2
-    for args in gen_random_iid_lmap_systems(pzero):
-        T, e_to_P, r, r_prior, node_lmaps = args
-        cy_lhoods = dynamic_lmap_lhood.get_iid_lhoods(*args)
-        py_lhoods = []
-        for node_lmap in node_lmaps:
-            lhood = dynamic_lmap_lhood.get_lhood(
-                    T, e_to_P, r, r_prior, node_lmap)
-            py_lhoods.append(0 if lhood is None else lhood)
-        assert_allclose(cy_lhoods, py_lhoods)
-
